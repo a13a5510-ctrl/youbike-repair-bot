@@ -24,9 +24,20 @@
 
     <div class="controls" id="button-container"></div>
 
-    <div class="dashboard">
-        <div class="panel map-panel">
+    <div class="dashboard" id="main-dashboard">
+        <div class="panel map-panel" id="map-panel-container">
             <div class="legend-box" id="legend-box-content"></div>
+            
+            <div class="floating-base-metrics" id="floating-stats-area">
+                <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: var(--text-primary); text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">全國總計基礎施測數據 (2026/03)</div>
+                <div class="base-metrics-grid grid-cols-2">
+                    <div class="metric-card"><div class="metric-title">施測站數</div><div class="metric-value">290 站</div></div>
+                    <div class="metric-card"><div class="metric-title">施測車輛總數</div><div class="metric-value">2054 輛</div></div>
+                    <div class="metric-card"><div class="metric-title">2.0E 施測車數</div><div class="metric-value">316 輛</div></div>
+                    <div class="metric-card alert"><div class="metric-title">前後胎壓未達標</div><div class="metric-value">66 輛 (3.2%)</div></div>
+                </div>
+            </div>
+
             <div class="city-detail-panel" id="cityDetailPanel">
                 <h4 id="detail-title">選擇縣市</h4>
                 <div id="detail-content"></div>
@@ -35,18 +46,8 @@
             <div id="mapChart" class="chart-container" style="opacity: 0; transition: opacity 0.5s;"></div>
         </div>
 
-        <div class="panel chart-panel" style="overflow-y: auto;">
+        <div class="panel chart-panel" id="right-chart-panel" style="overflow-y: auto;">
             
-            <div class="base-metrics-wrapper" id="base-metrics-area">
-                <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary);">全國總計基礎施測數據 (2026/03)</div>
-                <div class="base-metrics-grid grid-cols-4">
-                    <div class="metric-card"><div class="metric-title">施測站數</div><div class="metric-value">290 站</div></div>
-                    <div class="metric-card"><div class="metric-title">施測車輛總數</div><div class="metric-value">2054 輛</div></div>
-                    <div class="metric-card"><div class="metric-title">2.0E 施測車數</div><div class="metric-value">316 輛</div></div>
-                    <div class="metric-card alert"><div class="metric-title">前後胎壓未達標</div><div class="metric-value">66 輛 (3.2%)</div></div>
-                </div>
-            </div>
-
             <div class="base-metrics-wrapper hidden" id="maintenance-metrics-area">
                 <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
                     全國營運車輛數對比
@@ -125,7 +126,7 @@
         </div>
     </div>
 
-    <script src="js/data.js?v=1.1"></script>
-    <script src="js/app.js?v=1.1"></script>
+    <script src="js/data.js?v=1.2"></script>
+    <script src="js/app.js?v=1.2"></script>
 </body>
 </html>
