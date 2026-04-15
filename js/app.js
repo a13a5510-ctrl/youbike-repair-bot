@@ -27,10 +27,12 @@ function renderSubButtons() {
                 btn.classList.add('active');
                 currentStatsMetric = metric.key;
                 
-                // 🌟 修復2：即使在第一宇宙，只要點擊子選單，就退出全螢幕，顯示右側圖表
+                // 點擊第一宇宙的子選單時，退出全螢幕以顯示右側長條圖
                 document.getElementById('main-dashboard').classList.remove('full-width-map');
                 document.getElementById('floating-stats-area').classList.add('hidden');
-                setTimeout(() => { mapChart.resize(); barChart.resize(); }, 300);
+                
+                // 🌟 修復隱形區塊問題：延遲重繪地圖尺寸，確保 CSS 動畫跑完
+                setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
 
                 updateBarChart(); 
             });
@@ -104,12 +106,12 @@ function switchMode(mode, targetElement) {
 
     if (mode === 'stats') {
         controlsArea.classList.remove('hidden');
-        // 🌟 修復2：切換回第一宇宙預設時，開啟全螢幕地圖與浮動四格！
+        // 🌟 切換回第一宇宙預設時，開啟全螢幕地圖與浮動四格！
         dashboard.classList.add('full-width-map');
         floatingStats.classList.remove('hidden');
         currentStatsMetric = ''; // 取消子選單的 active 狀態
     } else {
-        dashboard.classList.remove('full-width-map'); // 其他宇宙不使用全螢幕
+        dashboard.classList.remove('full-width-map'); 
         
         if (mode === 'maintenance') {
             controlsArea.classList.remove('hidden');
@@ -131,14 +133,14 @@ function switchMode(mode, targetElement) {
     updateLegendBox();
     updateMapTheme(); 
     
-    // 延遲繪製以確保動畫完成
+    // 🌟 修復隱形區塊：延遲重繪以確保 CSS Flex 變換完成
     setTimeout(() => {
         mapChart.resize();
         if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
             barChart.resize();
             updateBarChart(); 
         }
-    }, 300);
+    }, 350);
 }
 
 // 3. 動態生成總數量明細
@@ -194,7 +196,7 @@ function updateLegendBox() {
     }
 }
 
-// 5. 日夜主題切換
+// 5. 工具列：日夜切換與投影模式
 document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     isLightMode = !isLightMode;
     document.body.classList.toggle('light-mode', isLightMode);
@@ -211,34 +213,16 @@ document.getElementById('presentationToggleBtn').addEventListener('click', (e) =
     if (isPresentationMode) {
         e.target.classList.add('active');
         e.target.innerText = '🖥️ 退出投影';
-        
-        // 投影模式下，我們需要強制 ECharts 重新計算地圖的 bounding box
-        // 這裡設定一個固定的 center 和 zoom 可以避免地圖亂跑
-        mapChart.setOption({
-            geo: {
-                center: [120.5, 23.8], // 台灣中心點
-                zoom: 1.2 // 固定縮放比例
-            }
-        });
+        mapChart.setOption({ geo: { center: [120.5, 23.8], zoom: 1.2 } });
     } else {
         e.target.classList.remove('active');
         e.target.innerText = '📺 投影模式';
-        
-        // 退出投影模式，解除鎖定，讓 ECharts 自動適應 (roam)
-        mapChart.setOption({
-            geo: {
-                center: null,
-                zoom: 1
-            }
-        });
+        mapChart.setOption({ geo: { center: null, zoom: 1 } });
     }
     
-    // 延遲一下讓 CSS 動畫跑完再觸發 ECharts 的 resize
-    setTimeout(() => {
-        mapChart.resize();
-        barChart.resize();
-    }, 300);
+    setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
 });
+
 
 // 6. ECharts 繪圖核心
 function getMapValue(item) {
@@ -330,7 +314,6 @@ function updateMapTheme() {
     }, false); 
 }
 
-// 🌟 修復3 & 修復4：長條圖 / 折線圖更新與變動值標示
 function updateBarChart() {
     if (!twGeoJson || (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info')) return;
     
@@ -341,49 +324,48 @@ function updateBarChart() {
     const dangerColor = style.getPropertyValue('--danger-color').trim();
     const safeColor = style.getPropertyValue('--safe-color').trim();
 
-    let regions, currentValues, previousValues, chartTitle, avgValue, isPercentage = false;
-
-    // 🌟 修復3：如果是胎壓 (tire) 模式，完全改變圖表類型為 6M 折線圖
+    // 🌟 修復：胎壓宇宙專屬「降噪 6M 折線圖」
     if (currentMode === 'tire') {
-        const sortedData = [...rawData].sort((a, b) => b.tire_history[6] - a.tire_history[6]);
-        regions = sortedData.map(item => item.region);
-        
-        // 準備 6 個月的折線圖系列資料
+        const sortedData = [...rawData].sort((a, b) => b.tire_history[6] - a.tire_history[6]); // 胎壓最高排前面
+        const regions = sortedData.map(item => item.region);
         const months = ['25/10', '25/11', '25/12', '26/01', '26/02', '26/03'];
         const seriesData = [];
-        
-        // 繪製各縣市的折線
+
         sortedData.forEach((item, index) => {
+            let isTop = index < 3; // 只強調前 3 名最差的
             seriesData.push({
                 name: item.region,
                 type: 'line',
-                data: item.tire_history.slice(1), // 抓取 10月到 3月
+                data: item.tire_history.slice(1),
                 smooth: true,
-                symbol: 'circle',
-                symbolSize: 6,
-                lineStyle: { width: 3 },
-                // 強調當前最高的三個縣市
-                itemStyle: { color: index < 3 ? dangerColor : (isLightMode ? '#94a3b8' : '#475569') },
-                label: { show: index < 3, position: 'top', formatter: '{c}%' }
+                symbol: isTop ? 'circle' : 'none',
+                symbolSize: 8,
+                lineStyle: { width: isTop ? 4 : 2, opacity: isTop ? 1 : 0.15 },
+                itemStyle: { color: isTop ? dangerColor : (isLightMode ? '#64748b' : '#94a3b8') },
+                label: { show: false }, // 隱藏沿途標籤
+                endLabel: { // 🌟 取代圖例，在線條盡頭直接標示縣市
+                    show: true, formatter: '{a} {c}%', color: 'inherit',
+                    fontSize: isTop ? 14 : 11, fontWeight: isTop ? 'bold' : 'normal'
+                },
+                zlevel: isTop ? 10 : 1
             });
         });
 
         barChart.setOption({
             title: { text: '全國各縣市前後胎壓未達標趨勢 (近 6 個月)', left: 'center', textStyle: { color: textColor, fontSize: 15 } },
-            tooltip: { 
-                trigger: 'axis', backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor },
-                valueFormatter: (value) => value + '%'
-            },
-            legend: { data: regions, bottom: 0, textStyle: { color: textColor }, type: 'scroll' },
-            grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+            tooltip: { trigger: 'axis', backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor }, valueFormatter: (value) => value + '%' },
+            legend: { show: false }, // 🌟 隱藏雜亂圖例
+            grid: { left: '3%', right: '12%', bottom: '10%', top: '15%', containLabel: true }, // 右側留空間給 endLabel
             xAxis: { type: 'category', data: months, axisLabel: { color: textColor }, axisLine: { lineStyle: { color: gridColor } } },
             yAxis: { type: 'value', axisLabel: { color: textColor, formatter: '{value} %' }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
             series: seriesData
         }, true);
-        return; // 胎壓折線圖處理完畢，直接返回
+        return;
     }
 
-    // 其他模式維持長條圖邏輯
+    // --- 其他宇宙的長條圖邏輯 ---
+    let regions, currentValues, previousValues, chartTitle, avgValue, isPercentage = false;
+
     if (currentMode === 'stats') {
         const sortedData = [...rawData].sort((a, b) => b[currentStatsMetric] - a[currentStatsMetric]);
         regions = sortedData.map(item => item.region); currentValues = sortedData.map(item => item[currentStatsMetric]); previousValues = sortedData.map(item => item[currentStatsMetric + '_feb']);
@@ -418,18 +400,17 @@ function updateBarChart() {
             trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor },
             formatter: function(params) {
                 let html = `<div style="font-weight:bold;margin-bottom:5px;">${params[0].axisValue}</div>`;
-                
                 let valPrev = params[0].value;
                 let valCurr = params[1].value;
                 
                 params.forEach(p => { html += `${p.marker} ${p.seriesName}: <b style="color:${p.color}">${p.value}${isPercentage ? '%' : ''}</b><br/>`; });
                 
-                // 🌟 修復4：所有長條圖的 Tooltip 都強制加入變動率計算
+                // 🌟 修復：所有長條圖的 Tooltip 都強制加入變動率計算與自動判別好壞顏色
                 let diff = (valCurr - valPrev).toFixed(isPercentage ? 2 : 0);
                 let diffSign = diff > 0 ? '+' : '';
                 let isBetter = false;
                 
-                // 判斷邏輯：哪些變多是好的，哪些變少是好的
+                // 判別：哪些變多是好的，哪些變少是好的
                 if(currentMode === 'maintenance' && currentMaintenanceMetric === 'm_accident') isBetter = diff <= 0;
                 else if(currentMode === 'simulation') isBetter = diff <= 0;
                 else isBetter = diff >= 0;
@@ -437,7 +418,6 @@ function updateBarChart() {
                 let diffColor = isBetter ? safeColor : dangerColor;
                 
                 html += `<div style="margin-top:5px; border-top:1px solid ${isLightMode?'#cbd5e1':'#334155'}; padding-top:5px; font-size:12px;">較上月變動: <b style="color:${diffColor}">${diffSign}${diff}${isPercentage ? '%' : ''}</b></div>`;
-                
                 return html;
             }
         },
@@ -521,6 +501,10 @@ async function initDashboard() {
         renderInitialMap();
         updateBarChart();
         setupMapClickEvent();
+        
+        // 🌟 修復隱形區塊吃掉地圖：等待動畫結束後強制重繪地圖尺寸
+        setTimeout(() => { mapChart.resize(); }, 350);
+
     } catch (error) {
         document.getElementById('loading').innerText = '地圖載入失敗，請檢查網路連線。';
     }
