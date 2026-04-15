@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>維修維護提升改善會議 2026/03 資訊</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="header">
+        <h1>維修維護提升改善會議 2026/03 資訊</h1>
+        <button class="theme-toggle" id="themeToggleBtn">🌞 淺色模式</button>
+    </div>
+
+    <div class="top-nav">
+        <button class="active" id="nav-stats">全國縣市平均數據：施測數據統計</button>
+        <button id="nav-tire">全國縣市平均數據：前後胎壓未達標準(6M)</button>
+        <button id="nav-operability">全國縣市平均數據：各縣市場站可動率</button>
+        <button id="nav-maintenance">全國縣市平均數據：各縣市車輛事故與一級維護數量統計</button>
+    </div>
+
+    <div class="controls" id="button-container"></div>
+
+    <div class="dashboard">
+        <div class="panel map-panel">
+            <div class="legend-box" id="legend-box-content"></div>
+            <div class="city-detail-panel" id="cityDetailPanel">
+                <h4 id="detail-title">選擇縣市</h4>
+                <div id="detail-content"></div>
+            </div>
+            <div id="loading" class="loading-text">載入衛星地圖數據中...</div>
+            <div id="mapChart" class="chart-container" style="opacity: 0; transition: opacity 0.5s;"></div>
+        </div>
+
+        <div class="panel chart-panel" style="overflow-y: auto;">
+            
+            <div class="base-metrics-wrapper" id="base-metrics-area">
+                <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary);">全國總計基礎施測數據 (2026/03)</div>
+                <div class="base-metrics-grid grid-cols-4">
+                    <div class="metric-card"><div class="metric-title">施測站數</div><div class="metric-value">290 站</div></div>
+                    <div class="metric-card"><div class="metric-title">施測車輛總數</div><div class="metric-value">2054 輛</div></div>
+                    <div class="metric-card"><div class="metric-title">2.0E 施測車數</div><div class="metric-value">316 輛</div></div>
+                    <div class="metric-card alert"><div class="metric-title">前後胎壓未達標</div><div class="metric-value">66 輛 (3.2%)</div></div>
+                </div>
+            </div>
+
+            <div class="base-metrics-wrapper hidden" id="maintenance-metrics-area">
+                <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+                    全國營運車輛數對比
+                    <span id="fleet-title-hint" onclick="toggleFleetDetails()" style="font-size: 12px; color: var(--accent-color); cursor: pointer; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.1);">(點擊展開各縣市明細)</span>
+                </div>
+                <div id="fleet-summary" class="base-metrics-grid grid-cols-2 cursor-pointer" onclick="toggleFleetDetails()">
+                    <div class="metric-card hover-glow"><div class="metric-title">2026/02 總營運車輛數</div><div class="metric-value" style="color: var(--text-secondary);">106,688 輛</div></div>
+                    <div class="metric-card hover-glow"><div class="metric-title">2026/03 總營運車輛數</div><div class="metric-value">107,772 輛</div></div>
+                </div>
+                <div id="fleet-details" class="hidden cursor-pointer" onclick="toggleFleetDetails()">
+                    <div class="base-metrics-grid grid-cols-5" id="fleet-detail-grid"></div>
+                </div>
+            </div>
+
+            <div id="barChart" class="chart-container"></div>
+
+            <div id="maintenance-info-area" class="hidden" style="flex: 1; padding: 10px; animation: fadeIn 0.3s;">
+                <h3 style="color: var(--text-primary); margin-top: 0; margin-bottom: 15px;">一級維修 檢測與行動方案說明</h3>
+                
+                <div class="alert-banner">
+                    ⚠️ 反應相同條件設定下，營運端撈取 EMS 及 MIS 數據庫撈取之「一級維護數量」不同。
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div class="info-card">
+                        <h4>📌 異常排除定義</h4>
+                        <ul>
+                            <li><strong>事故車：</strong>尚有爭議未排除為不可修，排除一級維修計算。</li>
+                            <li><strong>故障車：</strong>將影響車輛整體上線率。</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-card">
+                        <h4>🔻 C級異常常見原因</h4>
+                        <ul>
+                            <li>檢測人員勾選標籤不明</li>
+                            <li>未填日期/人員</li>
+                            <li>未撕除舊貼紙</li>
+                            <li style="color: var(--danger-color); font-weight: bold;">比對 EMS 不同日</li>
+                            <li><span class="highlight-text">未貼標籤</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h4>📊 一級維護率 評分扣分標準</h4>
+                    <div style="display: flex; gap: 15px;">
+                        <table class="info-table">
+                            <tr><th colspan="2" class="highlight">一級維護率 90% 標準</th></tr>
+                            <tr><td>100% ~ 90%</td><td>0 分</td></tr>
+                            <tr><td>未達 90% ~ 85%</td><td>-1 分</td></tr>
+                            <tr><td>未達 85% ~ 80%</td><td>-2 分</td></tr>
+                            <tr><td>未達 80% ~ 75%</td><td>-3 分</td></tr>
+                            <tr><td>未達 75% ~ 70%</td><td>-4 分</td></tr>
+                            <tr><td style="color: var(--danger-color); font-weight:bold;">未達 70%</td><td style="color: var(--danger-color); font-weight:bold;">-5 分</td></tr>
+                        </table>
+                        <table class="info-table">
+                            <tr><th colspan="2" class="highlight">一級維護率 100% 標準</th></tr>
+                            <tr><td>100% ~ 90%</td><td>-1 分</td></tr>
+                            <tr><td>未達 90% ~ 85%</td><td>-2 分</td></tr>
+                            <tr><td>未達 85% ~ 80%</td><td>-3 分</td></tr>
+                            <tr><td>未達 80% ~ 75%</td><td>-4 分</td></tr>
+                            <tr><td style="color: var(--danger-color); font-weight:bold;">未達 75%</td><td style="color: var(--danger-color); font-weight:bold;">-5 分</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="info-card" style="margin-bottom: 0;">
+                    <h4>🚀 改善對策與時程</h4>
+                    <table class="info-table" style="text-align: left;">
+                        <tr><th style="width: 25%; text-align: center;">方案</th><th>執行內容</th></tr>
+                        <tr><td style="text-align: center; font-weight: bold;">臨時方案</td><td>以抽樣篩選出日期，90%達成率</td></tr>
+                        <tr><td style="text-align: center; font-weight: bold;">短中期</td><td>EMS使用標準，以EMS數據比對每台車每月須有一次維修紀錄</td></tr>
+                        <tr><td style="text-align: center; font-weight: bold; color: var(--accent-color);">長期</td><td>優化EMS系統，列管專案進度追蹤 <span class="highlight-text">(預計4月底測試，5月底上線)</span></td></tr>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
