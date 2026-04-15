@@ -151,21 +151,49 @@ function toggleSimDetails() {
 function updateLegendBox() {
     const legendBox = document.getElementById('legend-box-content');
     if (currentMode === 'stats') {
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">地圖綜合分數</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>大於等於 92分</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>90 - 91.9分</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>88 - 89.9分</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>低於 88分</div>`;
+        legendBox.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px;">地圖綜合分數</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>大於等於 92分</div>
+            <div class="legend-item"><div class="color-box" style="background: #eab308;"></div>90 - 91.9分</div>
+            <div class="legend-item"><div class="color-box" style="background: #f97316;"></div>88 - 89.9分</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>低於 88分</div>
+        `;
     } else if (currentMode === 'tire') {
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">胎壓未達標率</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>0% - 2%</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>3% - 4%</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>5% - 7%</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>大於 7%</div>`;
+        legendBox.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px;">胎壓未達標率</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>0% - 2%</div>
+            <div class="legend-item"><div class="color-box" style="background: #eab308;"></div>3% - 4%</div>
+            <div class="legend-item"><div class="color-box" style="background: #f97316;"></div>5% - 7%</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>大於 7%</div>
+        `;
     } else if (currentMode === 'operability') {
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">場站可動率 (總分扣分)</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>99% ~ 100% (扣 0 分)</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>95% ~ 99% (扣 1~2 分)</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>91% ~ 95% (扣 3~4 分)</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>未達 91% (扣 5 分)</div><div style="margin-top: 5px; color: var(--text-secondary); font-size: 11px;">*計分邏輯：含下不含上</div>`;
+        legendBox.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px;">場站可動率 (總分扣分)</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>99% ~ 100% (扣 0 分)</div>
+            <div class="legend-item"><div class="color-box" style="background: #eab308;"></div>95% ~ 99% (扣 1~2 分)</div>
+            <div class="legend-item"><div class="color-box" style="background: #f97316;"></div>91% ~ 95% (扣 3~4 分)</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>未達 91% (扣 5 分)</div>
+            <div style="margin-top: 5px; color: var(--text-secondary); font-size: 11px; line-height: 1.4;">
+                *計分邏輯：含下不含上<br>
+                (例：97%~99%區間扣1分，95%~97%扣2分...)<br>
+            </div>
+        `;
     } else if (currentMode === 'maintenance') {
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">一級維護率</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>95% - 100%</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>90% - 94.9%</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>85% - 89.9%</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>未達 85%</div>`;
+        legendBox.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 8px;">一級維護率</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>95% - 100%</div>
+            <div class="legend-item"><div class="color-box" style="background: #eab308;"></div>90% - 94.9%</div>
+            <div class="legend-item"><div class="color-box" style="background: #f97316;"></div>85% - 89.9%</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>未達 85%</div>
+        `;
     } else if (currentMode === 'simulation') {
-        // 動態變更第五宇宙的標準
+        // 🌟 拔除「警示」字眼，保持中立客觀
         let gradeStr = currentSimulationMetric === 'sim_a' ? 'A級' : (currentSimulationMetric === 'sim_b' ? 'B級' : 'C級');
         let ranges = currentSimulationMetric === 'sim_a' ? ['0% - 3%', '4% - 5%', '6% - 10%', '大於 10%'] : 
                      (currentSimulationMetric === 'sim_b' ? ['0% - 10%', '11% - 19%', '20% - 25%', '大於 25%'] : 
                      ['0% - 30%', '31% - 45%', '46% - 55%', '大於 55%']);
 
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">${gradeStr} 異常占比警示</div>
+        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">${gradeStr} 異常占比</div>
             <div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>${ranges[0]}</div>
             <div class="legend-item"><div class="color-box" style="background: #eab308;"></div>${ranges[1]}</div>
             <div class="legend-item"><div class="color-box" style="background: #f97316;"></div>${ranges[2]}</div>
@@ -312,12 +340,12 @@ function updateBarChart() {
         avgValue = (currentValues.reduce((a, b) => a + b, 0) / currentValues.length).toFixed(isPercentage ? 2 : 0);
     } else if (currentMode === 'simulation') {
         isPercentage = true;
-        // 第五宇宙：低異常率較好，所以由低排到高
         const sortedData = [...rawData].sort((a, b) => a[currentSimulationMetric + '_ratio'] - b[currentSimulationMetric + '_ratio']);
         regions = sortedData.map(item => item.region); 
         currentValues = sortedData.map(item => item[currentSimulationMetric + '_ratio']); 
         previousValues = sortedData.map(item => item[currentSimulationMetric + '_lm']);
-        chartTitle = `${simulationMetrics.find(m => m.key === currentSimulationMetric).label}對比 (上月 vs 本月)`;
+        
+        chartTitle = `${simulationMetrics.find(m => m.key === currentSimulationMetric).label}異常占比對比 (2月 vs 3月)`;
         avgValue = (currentValues.reduce((a, b) => a + b, 0) / currentValues.length).toFixed(1);
     }
 
@@ -336,20 +364,23 @@ function updateBarChart() {
                     const regionData = rawData.find(r => r.region === params[0].axisValue);
                     const count = regionData[currentSimulationMetric + '_count'];
                     const variance = regionData[currentSimulationMetric + '_var'];
-                    const varColor = variance.includes('-') ? safeColor : dangerColor; // 異常數量變動，減號(-)反而是安全綠色！
-                    html += `<div style="margin-top:5px; border-top:1px solid ${isLightMode?'#cbd5e1':'#334155'}; padding-top:5px; font-size:12px;">本月實際數量: <b>${count} 輛</b><br/>較上月變動: <b style="color:${varColor}">${variance}</b></div>`;
+                    const varColor = variance.includes('-') ? safeColor : dangerColor; 
+                   
+                    html += `<div style="margin-top:5px; border-top:1px solid ${isLightMode?'#cbd5e1':'#334155'}; padding-top:5px; font-size:12px;">3月實際數量: <b>${count} 輛</b><br/>較上月變動: <b style="color:${varColor}">${variance}</b></div>`;
                 }
                 return html;
             }
         },
-        legend: { data: currentMode === 'simulation' ? ['上月', '本月'] : ['2月 (前月)', '3月 (當月)'], bottom: 0, textStyle: { color: textColor } },
+
+        legend: { data: ['2月 (前月)', '3月 (當月)'], bottom: 0, textStyle: { color: textColor } },
         grid: { left: '3%', right: '8%', bottom: '15%', top: '15%', containLabel: true },
         xAxis: { type: 'category', data: regions, axisLabel: { color: textColor }, axisLine: { lineStyle: { color: gridColor } } },
         yAxis: { type: 'value', min: function(val) { return isPercentage ? Math.max(0, Math.floor(val.min - 5)) : 0; }, axisLabel: { color: textColor, formatter: isPercentage ? '{value} %' : '{value}' }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
         series: [
-            { name: currentMode === 'simulation' ? '上月' : '2月 (前月)', type: 'bar', barWidth: '30%', itemStyle: { color: isLightMode ? '#cbd5e1' : '#475569', borderRadius: [4, 4, 0, 0] }, label: { show: false }, data: previousValues },
+            
+            { name: '2月 (前月)', type: 'bar', barWidth: '30%', itemStyle: { color: isLightMode ? '#cbd5e1' : '#475569', borderRadius: [4, 4, 0, 0] }, label: { show: false }, data: previousValues },
             {
-                name: currentMode === 'simulation' ? '本月' : '3月 (當月)', type: 'bar', barWidth: '30%', itemStyle: { borderRadius: [4, 4, 0, 0] },
+                name: '3月 (當月)', type: 'bar', barWidth: '30%', itemStyle: { borderRadius: [4, 4, 0, 0] },
                 data: currentValues.map(val => {
                     let barColor = accentColor;
                     if (currentMode === 'stats' || currentMode === 'operability') barColor = val < avgValue ? dangerColor : accentColor;
@@ -361,7 +392,7 @@ function updateBarChart() {
                     return { value: val, itemStyle: { color: barColor } };
                 }),
                 label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: isPercentage ? '{c}%' : '{c}' },
-                markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold' }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
+                markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `3月平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold' }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
             }
         ]
     }, true);
