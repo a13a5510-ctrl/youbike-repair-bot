@@ -1,3 +1,5 @@
+/* css/style.css */
+
 /* 深色模式變數 (預設) */
 :root {
     --bg-color: #0b1120;
@@ -17,15 +19,15 @@
 body.light-mode {
     --bg-color: #e2e8f0;
     --panel-bg: rgba(255, 255, 255, 0.6);
-    --text-primary: #1e293b;
-    --text-secondary: #475569;
+    --text-primary: #0f172a; /* 🌟 修復1：淺色模式主文字改為深灰黑，確保清晰 */
+    --text-secondary: #334155; /* 🌟 修復1：淺色模式次要文字加深 */
     --accent-color: #2563eb;
     --danger-color: #e11d48;
     --warning-color: #d97706;
     --safe-color: #059669;
-    --border-color: rgba(255, 255, 255, 0.8);
+    --border-color: rgba(148, 163, 184, 0.4); /* 🌟 修復1：淺色模式邊框加深一點點 */
     --chart-grid: #cbd5e1;
-    --map-base: #cbd5e1;
+    --map-base: #e2e8f0;
 }
 
 body {
@@ -62,13 +64,13 @@ body {
     border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: bold;
     transition: all 0.3s; backdrop-filter: blur(10px); letter-spacing: 1px;
 }
-body.light-mode .top-nav button { background-color: rgba(255, 255, 255, 0.5); }
+body.light-mode .top-nav button { background-color: rgba(255, 255, 255, 0.5); color: var(--text-secondary); } /* 🌟 修復1：確保未選中按鈕在淺色模式的顏色 */
 .top-nav button:hover { border-color: var(--accent-color); color: var(--text-primary); }
 .top-nav button.active {
     background-color: var(--accent-color); color: #fff;
     border-color: var(--accent-color); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
 }
-body.light-mode .top-nav button.active { color: #fff; }
+body.light-mode .top-nav button.active { color: #fff; } /* 選中永遠是白字 */
 
 /* 子項目戰術按鈕 */
 .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; min-height: 32px; }
@@ -79,10 +81,11 @@ body.light-mode .top-nav button.active { color: #fff; }
     transition: all 0.3s; backdrop-filter: blur(10px);
 }
 .controls button:hover, .controls button.active { border-color: var(--accent-color); color: var(--text-primary); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
-body.light-mode .controls button.active { background-color: rgba(37, 99, 235, 0.1); }
+body.light-mode .controls button.active { background-color: rgba(37, 99, 235, 0.1); color: var(--accent-color); } /* 🌟 修復1：淺色模式子選單選中字體變藍色 */
 body:not(.light-mode) .controls button.active { background-color: rgba(56, 189, 248, 0.2); }
 
-.dashboard { display: flex; flex: 1; gap: 20px; min-height: 0; }
+/* 🌟 修復2：彈性佈局，支援整頁大地圖 */
+.dashboard { display: flex; flex: 1; gap: 20px; min-height: 0; transition: all 0.5s ease; }
 .panel {
     background-color: var(--panel-bg); backdrop-filter: blur(15px);
     border-radius: 12px; border: 1px solid var(--border-color);
@@ -90,9 +93,13 @@ body:not(.light-mode) .controls button.active { background-color: rgba(56, 189, 
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); transition: background-color 0.4s, border-color 0.4s;
 }
 
-.map-panel { flex: 4.5; padding: 15px; }
-.chart-panel { flex: 5.5; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+.map-panel { flex: 4.5; padding: 15px; transition: flex 0.5s ease; }
+.chart-panel { flex: 5.5; padding: 15px; display: flex; flex-direction: column; gap: 10px; transition: flex 0.5s ease, opacity 0.3s ease; }
 .chart-container { flex: 1; width: 100%; height: 100%; min-height: 300px; }
+
+/* 當套用此 class 時，地圖佔滿，圖表消失 */
+.full-width-map .map-panel { flex: 1; }
+.full-width-map .chart-panel { flex: 0; opacity: 0; overflow: hidden; padding: 0; margin: 0; border: none; }
 
 /* 基礎數據卡片區塊 */
 .base-metrics-wrapper { display: block; transition: opacity 0.3s; }
@@ -109,9 +116,9 @@ body:not(.light-mode) .controls button.active { background-color: rgba(56, 189, 
 
 .cursor-pointer { cursor: pointer; }
 .hover-glow:hover { border-color: var(--accent-color); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); transform: translateY(-1px); }
-
 .hidden { display: none !important; }
 
+/* 浮動視窗 */
 .city-detail-panel {
     position: absolute; bottom: 20px; right: 20px;
     background: var(--panel-bg); backdrop-filter: blur(20px);
@@ -119,9 +126,10 @@ body:not(.light-mode) .controls button.active { background-color: rgba(56, 189, 
     padding: 15px; width: 230px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     display: none; z-index: 10; color: var(--text-primary);
 }
-.city-detail-panel h4 { margin: 0 0 10px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+.city-detail-panel h4 { margin: 0 0 10px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--accent-color); }
 .detail-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
 
+/* 圖例 */
 .legend-box {
     position: absolute; top: 20px; left: 20px;
     background: var(--panel-bg); backdrop-filter: blur(10px);
@@ -132,7 +140,7 @@ body:not(.light-mode) .controls button.active { background-color: rgba(56, 189, 
 .color-box { width: 15px; height: 15px; margin-right: 8px; border-radius: 3px; }
 .loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--accent-color); font-size: 18px; font-weight: bold; }
 
-/* 🌟 新增：一級維修補充面板專屬樣式 */
+/* 一級維修面板 */
 .info-card { background: rgba(128, 128, 128, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
 .info-card h4 { margin: 0 0 10px 0; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
 .info-card ul { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; }
@@ -143,3 +151,18 @@ body:not(.light-mode) .controls button.active { background-color: rgba(56, 189, 
 .info-table .highlight { background: rgba(234, 179, 8, 0.2); font-weight: bold; color: var(--warning-color); }
 .alert-banner { background: rgba(244, 63, 94, 0.15); border-left: 4px solid var(--danger-color); padding: 10px 15px; margin-bottom: 15px; border-radius: 0 4px 4px 0; font-size: 14px; font-weight: bold; color: var(--danger-color); }
 .highlight-text { background: rgba(234, 179, 8, 0.2); padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+
+/* 🌟 修復2：第一宇宙專屬的四格浮動面板 */
+.floating-base-metrics {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    background: var(--panel-bg);
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    width: 300px;
+}
