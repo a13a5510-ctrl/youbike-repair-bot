@@ -203,6 +203,43 @@ document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     if(currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info') updateBarChart(); 
 });
 
+let isPresentationMode = false;
+document.getElementById('presentationToggleBtn').addEventListener('click', (e) => {
+    isPresentationMode = !isPresentationMode;
+    document.body.classList.toggle('presentation-mode', isPresentationMode);
+    
+    if (isPresentationMode) {
+        e.target.classList.add('active');
+        e.target.innerText = '🖥️ 退出投影';
+        
+        // 投影模式下，我們需要強制 ECharts 重新計算地圖的 bounding box
+        // 這裡設定一個固定的 center 和 zoom 可以避免地圖亂跑
+        mapChart.setOption({
+            geo: {
+                center: [120.5, 23.8], // 台灣中心點
+                zoom: 1.2 // 固定縮放比例
+            }
+        });
+    } else {
+        e.target.classList.remove('active');
+        e.target.innerText = '📺 投影模式';
+        
+        // 退出投影模式，解除鎖定，讓 ECharts 自動適應 (roam)
+        mapChart.setOption({
+            geo: {
+                center: null,
+                zoom: 1
+            }
+        });
+    }
+    
+    // 延遲一下讓 CSS 動畫跑完再觸發 ECharts 的 resize
+    setTimeout(() => {
+        mapChart.resize();
+        barChart.resize();
+    }, 300);
+});
+
 // 6. ECharts 繪圖核心
 function getMapValue(item) {
     if (currentMode === 'stats') return item.overall;
