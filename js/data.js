@@ -1,6 +1,6 @@
 // js/data.js
 
-// 核心資料庫 (已整合第五平行宇宙：本月模擬體驗數據)
+// 核心資料庫 
 const rawData = [
     { region: "雙北", mapNames: ["臺北市", "台北市", "新北市"], overall: 89.63, overall_feb: 89.07, station: 96, station_feb: 94, appearance: 86, appearance_feb: 85, functionality: 98, functionality_feb: 98, ems: 84.3, ems_feb: 73.5, operability: 95.50, operability_feb: 95.93, mapCenter: [121.56, 25.03], labelPos: [122.5, 25.3], base: { s: 123, v: 869, e: 142, t: "22 輛 (2.5%)" }, tire_history: [16, 12, 11, 10, 1, 3, 3], maintenance_rate: 84.31, maintenance_rate_feb: 73.50, m_fleet: 49635, m_fleet_feb: 49191, m_accident: 120, m_accident_feb: 130, m_records: 40669, m_records_feb: 35186, m_var: "+10.81%", sim_total: 870, sim_a_count: 50, sim_a_ratio: 5.7, sim_a_lm: 7.0, sim_a_var: "-1.3%", sim_b_count: 169, sim_b_ratio: 19.4, sim_b_lm: 16.9, sim_b_var: "+2.5%", sim_c_count: 451, sim_c_ratio: 51.8, sim_c_lm: 58.1, sim_c_var: "-6.3%" },
     { region: "桃園", mapNames: ["桃園市", "桃園縣"], overall: 91.45, overall_feb: 88.98, station: 99, station_feb: 98, appearance: 84, appearance_feb: 84, functionality: 98, functionality_feb: 97, ems: 91.5, ems_feb: 78.8, operability: 95.86, operability_feb: 96.33, mapCenter: [121.21, 24.95], labelPos: [119.5, 25.1], base: { s: 28, v: 245, e: 23, t: "8 輛 (3.3%)" }, tire_history: [13, 9, 9, 11, 3, 4, 3], maintenance_rate: 91.53, maintenance_rate_feb: 78.75, m_fleet: 12107, m_fleet_feb: 12107, m_accident: 24, m_accident_feb: 14, m_records: 10730, m_records_feb: 9275, m_var: "+12.78%", sim_total: 217, sim_a_count: 9, sim_a_ratio: 4.1, sim_a_lm: 4.2, sim_a_var: "-0.1%", sim_b_count: 40, sim_b_ratio: 18.4, sim_b_lm: 23.0, sim_b_var: "-4.6%", sim_c_count: 138, sim_c_ratio: 63.6, sim_c_lm: 54.5, sim_c_var: "+9.1%" },
@@ -14,7 +14,7 @@ const rawData = [
     { region: "台東", mapNames: ["臺東縣", "台東縣"], overall: 97.50, overall_feb: 95.67, station: 100, station_feb: 100, appearance: 94, appearance_feb: 89, functionality: 99, functionality_feb: 99, ems: 100.0, ems_feb: 100.0, operability: 100.00, operability_feb: 100.00, mapCenter: [121.14, 22.75], labelPos: [122.5, 22.7], base: { s: 4, v: 24, e: 12, t: "0 輛 (0.0%)" }, tire_history: [0, 0, 0, 0, 0, 0, 0], maintenance_rate: 100.00, maintenance_rate_feb: 100.00, m_fleet: 1120, m_fleet_feb: 1120, m_accident: 6, m_accident_feb: 3, m_records: 1117, m_records_feb: 1120, m_var: "0.00%", sim_total: 24, sim_a_count: 0, sim_a_ratio: 0.0, sim_a_lm: 0.0, sim_a_var: "0.0%", sim_b_count: 2, sim_b_ratio: 8.3, sim_b_lm: 12.5, sim_b_var: "-4.2%", sim_c_count: 8, sim_c_ratio: 33.3, sim_c_lm: 41.7, sim_c_var: "-8.4%" }
 ];
 
-// 各平行宇宙的子選單邏輯
+// 子選單邏輯
 const statsMetrics = [
     { key: 'station', label: '場站妥善度' },
     { key: 'appearance', label: '自行車外觀與標示' },
@@ -32,7 +32,7 @@ const maintenanceMetrics = [
 
 // 第五宇宙：模擬體驗數據
 const simulationMetrics = [
-    { key: 'sim_a', label: 'A級異常占比' },
-    { key: 'sim_b', label: 'B級異常占比' },
-    { key: 'sim_c', label: 'C級異常占比' }
+    { key: 'sim_a', label: 'A級' },
+    { key: 'sim_b', label: 'B級' },
+    { key: 'sim_c', label: 'C級' }
 ];
