@@ -30,7 +30,7 @@ const maintenanceMetrics = [
     { key: 'm_info', label: '一級維護補充說明' }
 ];
 
-// 第五宇宙：模擬體驗數據
+// 模擬體驗數據
 const simulationMetrics = [
     { key: 'sim_a', label: 'A級' },
     { key: 'sim_b', label: 'B級' },
