@@ -18,7 +18,8 @@
         <button class="active" id="nav-stats">全國縣市平均數據：施測數據統計</button>
         <button id="nav-tire">全國縣市平均數據：前後胎壓未達標準(6M)</button>
         <button id="nav-operability">全國縣市平均數據：各縣市場站可動率</button>
-        <button id="nav-maintenance">全國縣市平均數據：各縣市車輛事故與一級維護數量統計</button>
+        <button id="nav-maintenance">全國縣市平均數據：車輛事故與一級維護</button>
+        <button id="nav-simulation">全國縣市平均數據：本月模擬體驗數據</button>
     </div>
 
     <div class="controls" id="button-container"></div>
@@ -60,36 +61,34 @@
                 </div>
             </div>
 
+            <div class="base-metrics-wrapper hidden" id="simulation-metrics-area">
+                <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+                    全國異常車輛數總計 (含主管評測，排除胎壓異常)
+                    <span id="sim-title-hint" onclick="toggleSimDetails()" style="font-size: 12px; color: var(--accent-color); cursor: pointer; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.1);">(點擊展開各縣市數量)</span>
+                </div>
+                <div id="sim-summary" class="base-metrics-grid cursor-pointer" style="grid-template-columns: 1fr;" onclick="toggleSimDetails()">
+                    <div class="metric-card hover-glow"><div class="metric-title">2026/03 本月異常總數量</div><div class="metric-value">2,106 輛</div></div>
+                </div>
+                <div id="sim-details" class="hidden cursor-pointer" onclick="toggleSimDetails()">
+                    <div class="base-metrics-grid grid-cols-5" id="sim-detail-grid"></div>
+                </div>
+            </div>
+
             <div id="barChart" class="chart-container"></div>
 
             <div id="maintenance-info-area" class="hidden" style="flex: 1; padding: 10px; animation: fadeIn 0.3s;">
                 <h3 style="color: var(--text-primary); margin-top: 0; margin-bottom: 15px;">一級維修 檢測與行動方案說明</h3>
-                
-                <div class="alert-banner">
-                    ⚠️ 反應相同條件設定下，營運端撈取 EMS 及 MIS 數據庫撈取之「一級維護數量」不同。
-                </div>
-
+                <div class="alert-banner">⚠️ 反應相同條件設定下，營運端撈取 EMS 及 MIS 數據庫撈取之「一級維護數量」不同。</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div class="info-card">
                         <h4>📌 異常排除定義</h4>
-                        <ul>
-                            <li><strong>事故車：</strong>尚有爭議未排除為不可修，排除一級維修計算。</li>
-                            <li><strong>故障車：</strong>將影響車輛整體上線率。</li>
-                        </ul>
+                        <ul><li><strong>事故車：</strong>尚有爭議未排除為不可修，排除一級維修計算。</li><li><strong>故障車：</strong>將影響車輛整體上線率。</li></ul>
                     </div>
-
                     <div class="info-card">
                         <h4>🔻 C級異常常見原因</h4>
-                        <ul>
-                            <li>檢測人員勾選標籤不明</li>
-                            <li>未填日期/人員</li>
-                            <li>未撕除舊貼紙</li>
-                            <li style="color: var(--danger-color); font-weight: bold;">比對 EMS 不同日</li>
-                            <li><span class="highlight-text">未貼標籤</span></li>
-                        </ul>
+                        <ul><li>檢測人員勾選標籤不明</li><li>未填日期/人員</li><li>未撕除舊貼紙</li><li style="color: var(--danger-color); font-weight: bold;">比對 EMS 不同日</li><li><span class="highlight-text">未貼標籤</span></li></ul>
                     </div>
                 </div>
-
                 <div class="info-card">
                     <h4>📊 一級維護率 評分扣分標準</h4>
                     <div style="display: flex; gap: 15px;">
@@ -112,7 +111,6 @@
                         </table>
                     </div>
                 </div>
-
                 <div class="info-card" style="margin-bottom: 0;">
                     <h4>🚀 改善對策與時程</h4>
                     <table class="info-table" style="text-align: left;">
