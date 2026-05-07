@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大師沙盒：數據對齊與趨勢引擎 (究極版)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b1120;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --warning-color: #f59e0b;
+            --danger-color: #f43f5e;
+            --border-color: #334155;
+            --success-color: #10b981;
+            --trend-up: #ef4444; 
+            --trend-down: #10b981; 
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            padding: 20px;
+            max-width: 1600px; /* 為了容納完整對比欄位，大師把版面再加寬 */
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        h1 { color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        
+        .control-panel {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        input[type="file"], input[type="number"] {
+            background-color: #0f172a;
+            color: white;
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: #0f172a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover { background-color: #0284c7; color: white;}
+
+        /* 表格究極排版 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: var(--panel-bg);
+            font-size: 0.85em; /* 字體微調，讓資料一目了然 */
+            text-align: center;
+        }
+
+        th, td {
+            padding: 8px 4px;
+            border: 1px solid var(--border-color);
+            white-space: nowrap; /* 防止欄位名稱折行 */
+        }
+
+        th { background-color: #0f172a; color: var(--text-primary); font-weight: 600; }
+        
+        /* 區塊顏色區分，視覺引導更清晰 */
+        .group-total { background-color: rgba(56, 189, 248, 0.1); }
+        .group-a { background-color: rgba(245, 158, 11, 0.05); }
+        .group-b { background-color: rgba(245, 158, 11, 0.15); }
+        .group-c { background-color: rgba(244, 63, 94, 0.15); }
+        
+        /* 標題列高光 */
+        th.group-total { border-top: 3px solid #38bdf8; color: #38bdf8;}
+        th.group-a { border-top: 3px solid #fbbf24; color: #fbbf24;}
+        th.group-b { border-top: 3px solid #f59e0b; color: #f59e0b;}
+        th.group-c { border-top: 3px solid #f43f5e; color: #f43f5e;}
+
+        .trend-up { color: var(--trend-up); font-weight: bold; }
+        .trend-down { color: var(--trend-down); font-weight: bold; }
+        .trend-flat { color: var(--text-secondary); }
+        .data-prev { color: var(--text-secondary); font-size: 0.9em; }
+
+        .output-panel { margin-top: 20px; }
+        textarea {
+            width: 100%;
+            height: 150px;
+            background-color: #0f172a;
+            color: var(--success-color);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            font-family: monospace;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>大師沙盒：數據對齊與趨勢引擎 🚀 (究極版)</h1>
+    
+    <div class="control-panel">
+        <div>
+            <label>1. 載入原始報表 (CSV): </label>
+            <input type="file" id="csvFileInput" accept=".csv">
+        </div>
+        <div>
+            <label>2. 目標月份 (本月): </label>
+            <input type="number" id="monthFilter" value="3" min="1" max="12">
+        </div>
+        <button onclick="processData()">▶ 執行趨勢運算</button>
+    </div>
+
+    <div id="tableContainer"></div>
+
+    <div class="output-panel">
+        <h3>📋 最終轉換 JSON</h3>
+        <textarea id="jsonOutput" readonly></textarea>
+    </div>
+
+    <script>
+        let rawData = [];
+
+        // 【大師秘笈】自訂縣市排序陣列
+        const targetRegionOrder = [
+            "雙北", "桃園", "新竹", "苗栗", "台中", 
+            "彰化", "雲林", "嘉義", "台南", "高雄", "屏東"
+        ];
+
+        document.getElementById('csvFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                header: false, 
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const allRows = results.data;
+                    let headerIndex = -1;
+                    let headers = [];
+
+                    for (let i = 0; i < allRows.length; i++) {
+                        if (allRows[i].includes('地區') && allRows[i].includes('月份')) {
+                            headerIndex = i;
+                            headers = allRows[i];
+                            break;
+                        }
+                    }
+
+                    if (headerIndex === -1) {
+                        alert("❌ 找不到包含 '地區' 與 '月份' 的標題列，請確認 CSV 格式！");
+                        return;
+                    }
+
+                    rawData = [];
+                    for (let i = headerIndex + 1; i < allRows.length; i++) {
+                        let rowObj = {};
+                        for (let j = 0; j < headers.length; j++) {
+                            const key = headers[j] ? headers[j].trim() : `未命名欄位_${j}`;
+                            rowObj[key] = allRows[i][j];
+                        }
+                        rawData.push(rowObj);
+                    }
+                    alert(`✅ CSV 解析成功！請點擊「執行趨勢運算」。`);
+                }
+            });
+        });
+
+        // 趨勢計算兵器 (自動處理數值與百分比)
+        function getTrend(current, prev, isPercent = false) {
+            const diff = current - prev;
+            if (diff === 0) return `<span class="trend-flat">-</span>`;
+            
+            const sign = diff > 0 ? "+" : "";
+            const valStr = isPercent ? diff.toFixed(1) + "%" : diff;
+            
+            if (diff > 0) return `<span class="trend-up">${sign}${valStr}</span>`;
+            return `<span class="trend-down">${valStr}</span>`;
+        }
+
+        function processData() {
+            if (rawData.length === 0) {
+                alert("請先選擇 CSV 檔案並等待解析完成！");
+                return;
+            }
+
+            const targetMonthNum = parseInt(document.getElementById('monthFilter').value);
+            const prevMonthNum = targetMonthNum === 1 ? 12 : targetMonthNum - 1;
+            const targetMonthStr = targetMonthNum.toString();
+            const prevMonthStr = prevMonthNum.toString();
+
+            const stats = {};
+
+            rawData.forEach(row => {
+                const region = (row['地區'] || '').trim();
+                const month = (row['月份'] || '').trim();
+
+                if (!region || region === '') return;
+                if (month !== targetMonthStr && month !== prevMonthStr) return;
+
+                if (!stats[region]) {
+                    stats[region] = {
+                        current: { total: 0, a: 0, b: 0, c: 0 },
+                        prev: { total: 0, a: 0, b: 0, c: 0 }
+                    };
+                }
+
+                const valA = (row['A級'] || '').toString().toUpperCase();
+                const valB = (row['B級'] || '').toString().toUpperCase();
+                const valC = (row['C級'] || '').toString().toUpperCase();
+
+                const isA = valA.includes('V') || valA.includes('O') || valA.includes('1');
+                const isB = valB.includes('V') || valB.includes('O') || valB.includes('1');
+                const isC = valC.includes('V') || valC.includes('O') || valC.includes('1');
+
+                const targetBucket = (month === targetMonthStr) ? stats[region].current : stats[region].prev;
+
+                targetBucket.total += 1;
+                if (isA) targetBucket.a += 1;
+                if (isB) targetBucket.b += 1;
+                if (isC) targetBucket.c += 1;
+            });
+
+            renderUI(stats, targetMonthNum, prevMonthNum);
+        }
+
+        function renderUI(stats, mCurrent, mPrev) {
+            // 【大師排版陣法】完全比照企業標準報表結構，數量與佔比並行
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="background:#0f172a;">地區</th>
+                            <th colspan="3" class="group-total">總檢修車數</th>
+                            <th colspan="4" class="group-a">A級 狀態對比</th>
+                            <th colspan="4" class="group-b">B級 狀態對比</th>
+                            <th colspan="4" class="group-c">C級 狀態對比</th>
+                        </tr>
+                        <tr>
+                            <th class="group-total">本月(${mCurrent}月)</th>
+                            <th class="group-total">上月(${mPrev}月)</th>
+                            <th class="group-total">增減</th>
+                            
+                            <th class="group-a">本月數量</th>
+                            <th class="group-a">上月數量</th>
+                            <th class="group-a">本月佔比</th>
+                            <th class="group-a">佔比增減</th>
+
+                            <th class="group-b">本月數量</th>
+                            <th class="group-b">上月數量</th>
+                            <th class="group-b">本月佔比</th>
+                            <th class="group-b">佔比增減</th>
+
+                            <th class="group-c">本月數量</th>
+                            <th class="group-c">上月數量</th>
+                            <th class="group-c">本月佔比</th>
+                            <th class="group-c">佔比增減</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            const sortedRegions = Object.keys(stats).sort((a, b) => {
+                let indexA = targetRegionOrder.findIndex(target => a.includes(target));
+                let indexB = targetRegionOrder.findIndex(target => b.includes(target));
+                if (indexA === -1) indexA = 999;
+                if (indexB === -1) indexB = 999;
+                return indexA - indexB;
+            });
+
+            for (const reg of sortedRegions) {
+                const cur = stats[reg].current;
+                const prv = stats[reg].prev;
+
+                // 佔比計算
+                const curRA = cur.total > 0 ? (cur.a / cur.total * 100) : 0;
+                const prvRA = prv.total > 0 ? (prv.a / prv.total * 100) : 0;
+                
+                const curRB = cur.total > 0 ? (cur.b / cur.total * 100) : 0;
+                const prvRB = prv.total > 0 ? (prv.b / prv.total * 100) : 0;
+                
+                const curRC = cur.total > 0 ? (cur.c / cur.total * 100) : 0;
+                const prvRC = prv.total > 0 ? (prv.c / prv.total * 100) : 0;
+
+                tableHtml += `
+                    <tr>
+                        <td style="font-weight:bold;">${reg}</td>
+                        
+                        <td class="group-total">${cur.total.toLocaleString()}</td>
+                        <td class="group-total data-prev">${prv.total.toLocaleString()}</td>
+                        <td class="group-total">${getTrend(cur.total, prv.total, false)}</td>
+                        
+                        <td class="group-a">${cur.a}</td>
+                        <td class="group-a data-prev">${prv.a}</td>
+                        <td class="group-a">${curRA.toFixed(1)}%</td>
+                        <td class="group-a">${getTrend(curRA, prvRA, true)}</td>
+
+                        <td class="group-b">${cur.b}</td>
+                        <td class="group-b data-prev">${prv.b}</td>
+                        <td class="group-b">${curRB.toFixed(1)}%</td>
+                        <td class="group-b">${getTrend(curRB, prvRB, true)}</td>
+
+                        <td class="group-c" style="font-weight:bold;">${cur.c}</td>
+                        <td class="group-c data-prev">${prv.c}</td>
+                        <td class="group-c" style="font-weight:bold;">${curRC.toFixed(1)}%</td>
+                        <td class="group-c">${getTrend(curRC, prvRC, true)}</td>
+                    </tr>
+                `;
+            }
+            tableHtml += `</tbody></table>`;
+            document.getElementById('tableContainer').innerHTML = tableHtml;
+
+            const orderedStatsArray = sortedRegions.map(reg => {
+                return { region: reg, current_month: stats[reg].current, prev_month: stats[reg].prev };
+            });
+            document.getElementById('jsonOutput').value = JSON.stringify(orderedStatsArray, null, 4);
+        }
+    </script>
+</body>
+</html>
