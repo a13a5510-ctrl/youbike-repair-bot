@@ -178,3 +178,52 @@ body.presentation-mode .map-panel { min-width: 600px !important; max-width: 800p
     border: 1px solid var(--border-color); border-radius: 12px;
     padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 300px;
 }
+
+/* --- 雷射筆專用特效 --- */
+.laser-dot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    background-color: #ff0000;
+    border-radius: 50%;
+    pointer-events: none; /* 讓滑鼠點擊可以穿透雷射點 */
+    z-index: 999999;
+    box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000;
+    opacity: 0;
+    display: none;
+    /* 取消 transition 確保鼠標跟隨零延遲 */
+}
+
+.laser-dot.active {
+    display: block;
+    opacity: 1;
+}
+
+/* --- 右上角工具列按鈕樣式 (全區方格化) --- */
+.header-tools button {
+    border-radius: 6px !important;
+    background: var(--panel-bg); /* 與面板底色一致，帶透明感 */
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* --- 投影模式 & 雷射筆：開啟時同步為「警示橘」 --- */
+button.presentation-toggle.active,
+button.laser-toggle.active {
+    background-color: var(--warning-color) !important; 
+    border-color: var(--warning-color) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); /* 橘色微光 */
+    font-weight: bold;
+}
+
+/* 懸停效果增強 */
+.header-tools button:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--accent-color);
+}
