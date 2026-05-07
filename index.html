@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>維修維護提升改善會議 2026/03 資訊</title>
+    <title>維修維護提升改善會議 2026/04 資訊</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
     <div class="header">
-        <h1>維修維護提升改善會議 2026/03 資訊</h1>
+        <h1>維修維護提升改善會議 2026/04 資訊</h1>
         <div class="header-tools">
+            <button class="laser-toggle" id="laserToggleBtn" title="開啟雷射筆效果">🔴 雷射筆</button>
             <button class="presentation-toggle" id="presentationToggleBtn" title="鎖定地圖比例，適合會議投影">📺 投影模式</button>
             <button class="theme-toggle" id="themeToggleBtn">🌞 淺色模式</button>
         </div>
@@ -32,12 +33,12 @@
             <div class="legend-box" id="legend-box-content"></div>
             
             <div class="floating-base-metrics" id="floating-stats-area">
-                <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: var(--text-primary); text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">全國總計基礎施測數據 (2026/03)</div>
+                <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: var(--text-primary); text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">全國總計基礎施測數據 (2026/04)</div>
                 <div class="base-metrics-grid grid-cols-2">
-                    <div class="metric-card"><div class="metric-title">施測站數</div><div class="metric-value">290 站</div></div>
-                    <div class="metric-card"><div class="metric-title">施測車輛總數</div><div class="metric-value">2054 輛</div></div>
-                    <div class="metric-card"><div class="metric-title">2.0E 施測車數</div><div class="metric-value">316 輛</div></div>
-                    <div class="metric-card alert"><div class="metric-title">前後胎壓未達標</div><div class="metric-value">66 輛 (3.2%)</div></div>
+                    <div class="metric-card"><div class="metric-title">施測站數</div><div class="metric-value">287 站</div></div>
+                    <div class="metric-card"><div class="metric-title">施測車輛總數</div><div class="metric-value">2019 輛</div></div>
+                    <div class="metric-card"><div class="metric-title">2.0E 施測車數</div><div class="metric-value">325 輛</div></div>
+                    <div class="metric-card alert"><div class="metric-title">前後胎壓未達標</div><div class="metric-value">83 輛 (4.1%)</div></div>
                 </div>
             </div>
 
@@ -57,8 +58,8 @@
                     <span id="fleet-title-hint" onclick="toggleFleetDetails()" style="font-size: 12px; color: var(--accent-color); cursor: pointer; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.1);">(點擊展開各縣市明細)</span>
                 </div>
                 <div id="fleet-summary" class="base-metrics-grid grid-cols-2 cursor-pointer" onclick="toggleFleetDetails()">
-                    <div class="metric-card hover-glow"><div class="metric-title">2026/02 總營運車輛數</div><div class="metric-value" style="color: var(--text-secondary);">106,688 輛</div></div>
-                    <div class="metric-card hover-glow"><div class="metric-title">2026/03 總營運車輛數</div><div class="metric-value">107,772 輛</div></div>
+                    <div class="metric-card hover-glow"><div class="metric-title">2026/03 總營運車輛數</div><div class="metric-value" style="color: var(--text-secondary);">107,772 輛</div></div>
+                    <div class="metric-card hover-glow"><div class="metric-title">2026/04 總營運車輛數</div><div class="metric-value">108,672 輛</div></div>
                 </div>
                 <div id="fleet-details" class="hidden cursor-pointer" onclick="toggleFleetDetails()">
                     <div class="base-metrics-grid grid-cols-5" id="fleet-detail-grid"></div>
@@ -71,7 +72,7 @@
                     <span id="sim-title-hint" onclick="toggleSimDetails()" style="font-size: 12px; color: var(--accent-color); cursor: pointer; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.1);">(點擊展開各縣市數量)</span>
                 </div>
                 <div id="sim-summary" class="base-metrics-grid cursor-pointer" style="grid-template-columns: 1fr;" onclick="toggleSimDetails()">
-                    <div class="metric-card hover-glow"><div class="metric-title">2026/03 本月異常總數量</div><div class="metric-value">2,106 輛</div></div>
+                    <div class="metric-card hover-glow"><div class="metric-title">2026/04 本月異常總數量</div><div class="metric-value">2,039 輛</div></div>
                 </div>
                 <div id="sim-details" class="hidden cursor-pointer" onclick="toggleSimDetails()">
                     <div class="base-metrics-grid grid-cols-5" id="sim-detail-grid"></div>
@@ -125,11 +126,12 @@
                     </table>
                 </div>
             </div>
-
         </div>
     </div>
 
-    <script src="js/data.js?v=1.3"></script>
-    <script src="js/app.js?v=1.3"></script>
+    <div id="laser-dot" class="laser-dot"></div>
+
+    <script src="js/data.js?v=1.6"></script>
+    <script src="js/app.js?v=1.4"></script>
 </body>
 </html>
