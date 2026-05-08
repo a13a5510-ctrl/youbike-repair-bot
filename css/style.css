@@ -287,3 +287,64 @@ body.full-projection-active .dashboard {
     border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s;
 }
 .modal-close-btn:hover { background: var(--danger-color); color: #fff; border-color: var(--danger-color); }
+
+/* --- 🌟 懸停展開按鈕特效 (抽屜式) --- */
+.hover-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px; /* 初始只顯示圖標的寬度 */
+    overflow: hidden;
+    white-space: nowrap;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 6px !important;
+}
+.hover-expand-btn .btn-icon {
+    font-size: 16px;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.hover-expand-btn .btn-text {
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 13px;
+    margin-left: 5px;
+}
+.hover-expand-btn:hover {
+    width: 145px; /* 懸停時拉長以顯示文字 */
+    padding: 6px 12px !important;
+}
+.hover-expand-btn:hover .btn-text {
+    opacity: 1;
+}
+
+/* 按鈕位置微調 */
+.map-data-toggle {
+    position: absolute; top: 20px; right: 20px; z-index: 30;
+    background: var(--panel-bg); border: 1px solid var(--accent-color);
+    color: var(--accent-color); border-radius: 6px;
+    font-weight: bold; cursor: pointer; backdrop-filter: blur(10px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+.map-data-toggle:hover { background: var(--accent-color); color: #fff; box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
+
+.variance-toggle-btn {
+    position: absolute; top: 15px; right: 20px; z-index: 20;
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    color: var(--text-primary); border-radius: 6px;
+    font-weight: bold; cursor: pointer; backdrop-filter: blur(10px);
+}
+.variance-toggle-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+.variance-toggle-btn.active-mode {
+    background: var(--warning-color); color: #fff; border-color: var(--warning-color);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+/* 視圖切換按鈕樣式 */
+.header-btn {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    color: var(--text-primary); border-radius: 6px; padding: 6px 12px;
+    font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s;
+}
+.header-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
