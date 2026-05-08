@@ -27,13 +27,10 @@ function renderSubButtons() {
                 btn.classList.add('active');
                 currentStatsMetric = metric.key;
                 
-                // 點擊第一宇宙的子選單時，退出全螢幕以顯示右側長條圖
                 document.getElementById('main-dashboard').classList.remove('full-width-map');
                 document.getElementById('floating-stats-area').classList.add('hidden');
                 
-                // 🌟 修復隱形區塊問題：延遲重繪地圖尺寸，確保 CSS 動畫跑完
                 setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
-
                 updateBarChart(); 
             });
             btnContainer.appendChild(btn);
@@ -97,7 +94,6 @@ function switchMode(mode, targetElement) {
     const dashboard = document.getElementById('main-dashboard');
     const floatingStats = document.getElementById('floating-stats-area');
 
-    // 預設隱藏所有非共通區塊
     maintMetricsArea.classList.add('hidden');
     simMetricsArea.classList.add('hidden');
     infoArea.classList.add('hidden');
@@ -106,10 +102,9 @@ function switchMode(mode, targetElement) {
 
     if (mode === 'stats') {
         controlsArea.classList.remove('hidden');
-        // 🌟 切換回第一宇宙預設時，開啟全螢幕地圖與浮動四格！
         dashboard.classList.add('full-width-map');
         floatingStats.classList.remove('hidden');
-        currentStatsMetric = ''; // 取消子選單的 active 狀態
+        currentStatsMetric = ''; 
     } else {
         dashboard.classList.remove('full-width-map'); 
         
@@ -133,7 +128,6 @@ function switchMode(mode, targetElement) {
     updateLegendBox();
     updateMapTheme(); 
     
-    // 🌟 修復隱形區塊：延遲重繪以確保 CSS Flex 變換完成
     setTimeout(() => {
         mapChart.resize();
         if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
@@ -149,7 +143,7 @@ function renderFleetDetails() {
     const simContainer = document.getElementById('sim-detail-grid');
     let htmlFleet = '', htmlSim = '';
     rawData.forEach(item => {
-        htmlFleet += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;"><span>4月:</span><span>${item.m_fleet_feb.toLocaleString()}</span></div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--accent-color); font-weight: bold;"><span>3月:</span><span>${item.m_fleet.toLocaleString()}</span></div></div>`;
+        htmlFleet += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;"><span>3月:</span><span>${item.m_fleet_feb.toLocaleString()}</span></div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--accent-color); font-weight: bold;"><span>4月:</span><span>${item.m_fleet.toLocaleString()}</span></div></div>`;
         htmlSim += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="font-size: 16px; color: var(--accent-color); font-weight: bold;">${item.sim_total.toLocaleString()} 輛</div></div>`;
     });
     container.innerHTML = htmlFleet;
@@ -196,7 +190,7 @@ function updateLegendBox() {
     }
 }
 
-// 5. 工具列：日夜切換與投影模式
+// 5. 工具列：日夜切換、投影模式與 雷射筆
 document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     isLightMode = !isLightMode;
     document.body.classList.toggle('light-mode', isLightMode);
@@ -223,11 +217,34 @@ document.getElementById('presentationToggleBtn').addEventListener('click', (e) =
     setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
 });
 
+let isLaserMode = false;
+const laserDot = document.getElementById('laser-dot');
+document.getElementById('laserToggleBtn').addEventListener('click', (e) => {
+    isLaserMode = !isLaserMode;
+    document.body.classList.toggle('laser-active', isLaserMode);
+    
+    if (isLaserMode) {
+        e.target.classList.add('active');
+        e.target.innerText = '❌ 關閉雷射';
+        laserDot.classList.add('active');
+    } else {
+        e.target.classList.remove('active');
+        e.target.innerText = '🔴 雷射筆';
+        laserDot.classList.remove('active');
+    }
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (isLaserMode) {
+        laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`;
+    }
+});
+
 
 // 6. ECharts 繪圖核心
 function getMapValue(item) {
     if (currentMode === 'stats') return item.overall;
-    else if (currentMode === 'tire') return item.tire_history[6];
+    else if (currentMode === 'tire') return item.tire_history[6]; // 百分比決定地圖顏色
     else if (currentMode === 'operability') return item.operability;
     else if (currentMode === 'maintenance') return item.maintenance_rate; 
     else if (currentMode === 'simulation') return item[currentSimulationMetric + '_ratio']; 
@@ -254,7 +271,8 @@ function renderInitialMap() {
         let val = getMapValue(item);
         item.mapNames.forEach(name => mapData.push({ name: name, value: val, customRegion: item.region }));
         lineData.push({ coords: [item.mapCenter, item.labelPos], value: val });
-        scatterData.push({ name: item.region, value: [item.labelPos[0], item.labelPos[1], val] });
+        // 多帶入一個 item.tire_count 給 label 使用
+        scatterData.push({ name: item.region, value: [item.labelPos[0], item.labelPos[1], val, item.tire_count] });
     });
 
     mapChart.setOption({
@@ -268,6 +286,10 @@ function renderInitialMap() {
                 label: {
                     show: true, position: 'right', distance: 10,
                     formatter: function(params) { 
+                        // 🌟 若在胎壓宇宙，改拿 value[3] 的 "輛數" 顯示
+                        if (currentMode === 'tire') {
+                            return `{region|${params.name}}\n{score|${params.value[3]} 輛}`;
+                        }
                         let unit = (currentMode === 'stats' || currentMode === 'maintenance') ? '分' : '%';
                         if(currentMode === 'maintenance') unit = '%'; 
                         if(currentMode === 'stats') unit = '分';
@@ -293,7 +315,7 @@ function updateMapTheme() {
         let val = getMapValue(item);
         item.mapNames.forEach(name => mapData.push({ name: name, value: val, customRegion: item.region }));
         lineData.push({ coords: [item.mapCenter, item.labelPos], value: val });
-        scatterData.push({ name: item.region, value: [item.labelPos[0], item.labelPos[1], val] });
+        scatterData.push({ name: item.region, value: [item.labelPos[0], item.labelPos[1], val, item.tire_count] });
     });
 
     mapChart.setOption({
@@ -304,6 +326,9 @@ function updateMapTheme() {
             { data: lineData, lineStyle: { color: isLightMode ? '#64748b' : '#94a3b8' } }, 
             { data: scatterData, itemStyle: { color: accentColor }, label: {
                 formatter: function(params) { 
+                    if (currentMode === 'tire') {
+                        return `{region|${params.name}}\n{score|${params.value[3]} 輛}`;
+                    }
                     let unit = '%'; if(currentMode === 'stats') unit = '分';
                     return `{region|${params.name}}\n{score|${params.value[2]} ${unit}}`; 
                 },
@@ -324,15 +349,14 @@ function updateBarChart() {
     const dangerColor = style.getPropertyValue('--danger-color').trim();
     const safeColor = style.getPropertyValue('--safe-color').trim();
 
-    // 🌟 修復：胎壓宇宙專屬「降噪 6M 折線圖」
     if (currentMode === 'tire') {
-        const sortedData = [...rawData].sort((a, b) => b.tire_history[6] - a.tire_history[6]); // 胎壓最高排前面
+        const sortedData = [...rawData].sort((a, b) => b.tire_history[6] - a.tire_history[6]); 
         const regions = sortedData.map(item => item.region);
-        const months = ['25/10', '25/11', '25/12', '26/01', '26/02', '26/03'];
+        const months = ['25/11', '25/12', '26/01', '26/02', '26/03', '26/04'];
         const seriesData = [];
 
         sortedData.forEach((item, index) => {
-            let isTop = index < 3; // 只強調前 3 名最差的
+            let isTop = index < 3; 
             seriesData.push({
                 name: item.region,
                 type: 'line',
@@ -342,8 +366,8 @@ function updateBarChart() {
                 symbolSize: 8,
                 lineStyle: { width: isTop ? 4 : 2, opacity: isTop ? 1 : 0.15 },
                 itemStyle: { color: isTop ? dangerColor : (isLightMode ? '#64748b' : '#94a3b8') },
-                label: { show: false }, // 隱藏沿途標籤
-                endLabel: { // 🌟 取代圖例，在線條盡頭直接標示縣市
+                label: { show: false }, 
+                endLabel: { 
                     show: true, formatter: '{a} {c}%', color: 'inherit',
                     fontSize: isTop ? 14 : 11, fontWeight: isTop ? 'bold' : 'normal'
                 },
@@ -354,8 +378,8 @@ function updateBarChart() {
         barChart.setOption({
             title: { text: '全國各縣市前後胎壓未達標趨勢 (近 6 個月)', left: 'center', textStyle: { color: textColor, fontSize: 15 } },
             tooltip: { trigger: 'axis', backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor }, valueFormatter: (value) => value + '%' },
-            legend: { show: false }, // 🌟 隱藏雜亂圖例
-            grid: { left: '3%', right: '12%', bottom: '10%', top: '15%', containLabel: true }, // 右側留空間給 endLabel
+            legend: { show: false }, 
+            grid: { left: '3%', right: '12%', bottom: '10%', top: '15%', containLabel: true }, 
             xAxis: { type: 'category', data: months, axisLabel: { color: textColor }, axisLine: { lineStyle: { color: gridColor } } },
             yAxis: { type: 'value', axisLabel: { color: textColor, formatter: '{value} %' }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
             series: seriesData
@@ -363,7 +387,6 @@ function updateBarChart() {
         return;
     }
 
-    // --- 其他宇宙的長條圖邏輯 ---
     let regions, currentValues, previousValues, chartTitle, avgValue, isPercentage = false;
 
     if (currentMode === 'stats') {
@@ -405,12 +428,10 @@ function updateBarChart() {
                 
                 params.forEach(p => { html += `${p.marker} ${p.seriesName}: <b style="color:${p.color}">${p.value}${isPercentage ? '%' : ''}</b><br/>`; });
                 
-                // 🌟 修復：所有長條圖的 Tooltip 都強制加入變動率計算與自動判別好壞顏色
                 let diff = (valCurr - valPrev).toFixed(isPercentage ? 2 : 0);
                 let diffSign = diff > 0 ? '+' : '';
                 let isBetter = false;
                 
-                // 判別：哪些變多是好的，哪些變少是好的
                 if(currentMode === 'maintenance' && currentMaintenanceMetric === 'm_accident') isBetter = diff <= 0;
                 else if(currentMode === 'simulation') isBetter = diff <= 0;
                 else isBetter = diff >= 0;
@@ -459,12 +480,12 @@ function setupMapClickEvent() {
                 document.getElementById('detail-content').innerHTML = `<div class="detail-row"><span>綜合分數:</span><span style="color:var(--accent-color); font-weight:bold;">${clickedRegion.overall}</span></div><div class="detail-row"><span>場站妥善度:</span><span>${clickedRegion.station}</span></div><div class="detail-row"><span>外觀標示:</span><span>${clickedRegion.appearance}</span></div><div class="detail-row"><span>重要機能:</span><span>${clickedRegion.functionality}</span></div><div class="detail-row"><span>EMS維護率:</span><span>${clickedRegion.ems}%</span></div><div class="detail-row"><span>可動率:</span><span>${clickedRegion.operability}%</span></div>`;
             } else if (currentMode === 'tire') {
                 document.getElementById('detail-title').innerText = `${clickedRegion.region} 胎壓未達標趨勢`;
-                document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>月份</span><span>未達標率</span></div><div class="detail-row"><span>26年 04月:</span><span>${clickedRegion.tire_history[1]}%</span></div><div class="detail-row"><span>26年 04月:</span><span>${clickedRegion.tire_history[2]}%</span></div><div class="detail-row"><span>26年 04月:</span><span>${clickedRegion.tire_history[3]}%</span></div><div class="detail-row"><span>26年 04月:</span><span>${clickedRegion.tire_history[4]}%</span></div><div class="detail-row"><span>26年 04月:</span><span>${clickedRegion.tire_history[5]}%</span></div><div class="detail-row" style="font-weight:bold; color:var(--accent-color);"><span>26年 04月:</span><span>${clickedRegion.tire_history[6]}%</span></div>`;
+                document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>月份</span><span>未達標率</span></div><div class="detail-row"><span>25年 11月:</span><span>${clickedRegion.tire_history[1]}%</span></div><div class="detail-row"><span>25年 12月:</span><span>${clickedRegion.tire_history[2]}%</span></div><div class="detail-row"><span>26年 01月:</span><span>${clickedRegion.tire_history[3]}%</span></div><div class="detail-row"><span>26年 02月:</span><span>${clickedRegion.tire_history[4]}%</span></div><div class="detail-row"><span>26年 03月:</span><span>${clickedRegion.tire_history[5]}%</span></div><div class="detail-row" style="font-weight:bold; color:var(--accent-color);"><span>26年 04月:</span><span>${clickedRegion.tire_history[6]}% (${clickedRegion.tire_count}輛)</span></div>`;
             } else if (currentMode === 'operability') {
                 let variance = (clickedRegion.operability - clickedRegion.operability_feb).toFixed(2);
                 let varianceSign = variance > 0 ? '+' : '';
                 document.getElementById('detail-title').innerText = `${clickedRegion.region} 月度可動率分析`;
-                document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>項目</span><span>數值</span></div><div class="detail-row"><span>4月可動率:</span><span>${clickedRegion.operability_feb.toFixed(2)}%</span></div><div class="detail-row" style="font-weight:bold; color:var(--accent-color);"><span>3月可動率:</span><span>${clickedRegion.operability.toFixed(2)}%</span></div><div class="detail-row"><span>月度變動:</span><span style="color:${variance < 0 ? 'var(--danger-color)' : 'var(--safe-color)'}; font-weight:bold;">${varianceSign}${variance}%</span></div>`;
+                document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>項目</span><span>數值</span></div><div class="detail-row"><span>3月可動率:</span><span>${clickedRegion.operability_feb.toFixed(2)}%</span></div><div class="detail-row" style="font-weight:bold; color:var(--accent-color);"><span>4月可動率:</span><span>${clickedRegion.operability.toFixed(2)}%</span></div><div class="detail-row"><span>月度變動:</span><span style="color:${variance < 0 ? 'var(--danger-color)' : 'var(--safe-color)'}; font-weight:bold;">${varianceSign}${variance}%</span></div>`;
             } else if (currentMode === 'maintenance') {
                 document.getElementById('detail-title').innerText = `${clickedRegion.region} 事故與維護統計`;
                 document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>項目</span><span>數值</span></div><div class="detail-row"><span>總營運車輛:</span><span>${clickedRegion.m_fleet.toLocaleString()} 輛</span></div><div class="detail-row"><span style="color:var(--danger-color);">事故車輛數:</span><span style="color:var(--danger-color); font-weight:bold;">${clickedRegion.m_accident} 輛</span></div><div class="detail-row"><span>維護記錄數:</span><span>${clickedRegion.m_records.toLocaleString()} 筆</span></div><div class="detail-row" style="font-weight:bold; color:var(--accent-color);"><span>一級維護率:</span><span>${clickedRegion.maintenance_rate}%</span></div><div class="detail-row"><span>較上月變動:</span><span style="color:${clickedRegion.m_var.includes('-') ? 'var(--danger-color)' : 'var(--safe-color)'}; font-weight:bold;">${clickedRegion.m_var}</span></div>`;
@@ -494,7 +515,6 @@ async function initDashboard() {
         renderFleetDetails(); 
         updateLegendBox();
         
-        // 🌟 初始化為第一宇宙，觸發全螢幕地圖
         document.getElementById('main-dashboard').classList.add('full-width-map');
         document.getElementById('floating-stats-area').classList.remove('hidden');
         
@@ -502,7 +522,6 @@ async function initDashboard() {
         updateBarChart();
         setupMapClickEvent();
         
-        // 🌟 修復隱形區塊吃掉地圖：等待動畫結束後強制重繪地圖尺寸
         setTimeout(() => { mapChart.resize(); }, 350);
 
     } catch (error) {
