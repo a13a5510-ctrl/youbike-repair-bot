@@ -9,7 +9,7 @@ let currentStatsMetric = 'station';
 let currentMaintenanceMetric = 'maintenance_rate';
 let currentSimulationMetric = 'sim_a';
 
-// 🌟 全局字體縮放倍率，專門用來計算 ECharts 內部的字體，防止點擊錯位
+// 全局字體縮放倍率，專門用來計算 ECharts 內部的字體，防止點擊錯位
 let globalFontScale = 1;
 
 const mapChart = echarts.init(document.getElementById('mapChart'));
@@ -191,7 +191,32 @@ function updateLegendBox() {
     }
 }
 
-// 5. 工具列：日夜切換、投影、雷射與雙拉環控制
+// 5. 佈局比例、字體縮放、型號適配與雷射筆
+document.getElementById('layoutSlider').addEventListener('input', (e) => {
+    const mapPct = e.target.value;
+    const chartPct = 100 - mapPct;
+    document.getElementById('map-panel-container').style.flex = `0 0 ${mapPct}%`;
+    document.getElementById('right-chart-panel').style.flex = `0 0 ${chartPct}%`;
+    mapChart.resize();
+    if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
+        barChart.resize(); 
+    }
+});
+
+window.adjustZoom = function(val) {
+    document.getElementById('fontSizeSlider').value = val;
+    document.getElementById('fontSizeSlider').dispatchEvent(new Event('input'));
+};
+
+document.getElementById('fontSizeSlider').addEventListener('input', (e) => {
+    globalFontScale = parseFloat(e.target.value);
+    document.querySelectorAll('.zoom-target').forEach(el => {
+        el.style.zoom = globalFontScale;
+    });
+    updateMapTheme();
+    updateBarChart();
+});
+
 document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     isLightMode = !isLightMode;
     document.body.classList.toggle('light-mode', isLightMode);
@@ -201,20 +226,49 @@ document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
 });
 
 let isPresentationMode = false;
-document.getElementById('presentationToggleBtn').addEventListener('click', (e) => {
+const projectorSelect = document.getElementById('projectorSelect');
+const presentationBtn = document.getElementById('presentationToggleBtn');
+
+presentationBtn.addEventListener('click', async () => {
     isPresentationMode = !isPresentationMode;
-    document.body.classList.toggle('presentation-mode', isPresentationMode);
+    const dashboard = document.getElementById('main-dashboard');
     
     if (isPresentationMode) {
-        e.target.classList.add('active');
-        e.target.innerText = '🖥️ 退出投影';
-        mapChart.setOption({ geo: { center: [120.5, 23.8], zoom: 1.2 } });
+        if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen().catch(() => {});
+        }
+        document.body.classList.add('full-projection-active');
+        presentationBtn.classList.add('active');
+        presentationBtn.innerText = '🖥️ 退出投影';
+        
+        const model = projectorSelect.value;
+        let pZoom = 1.0;
+        if (model === 'PA503W') {
+            pZoom = 1.15; 
+            mapChart.setOption({ geo: { center: [120.5, 23.8], zoom: 1.3 } });
+        } else if (model === 'NEC') {
+            pZoom = 1.25; 
+            mapChart.setOption({ geo: { center: [120.5, 23.8], zoom: 1.5 } });
+        }
+        dashboard.style.zoom = pZoom;
     } else {
-        e.target.classList.remove('active');
-        e.target.innerText = '📺 投影模式';
+        if (document.exitFullscreen && document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+        document.body.classList.remove('full-projection-active');
+        presentationBtn.classList.remove('active');
+        presentationBtn.innerText = '📺 投影模式';
+        dashboard.style.zoom = 1;
         mapChart.setOption({ geo: { center: null, zoom: 1 } });
     }
-    setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
+    
+    setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150);
+});
+
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && isPresentationMode) {
+        presentationBtn.click(); 
+    }
 });
 
 let isLaserMode = false;
@@ -238,41 +292,10 @@ document.addEventListener('mousemove', (e) => {
     if (isLaserMode) laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`;
 });
 
-// 🌟 佈局拉環控制 (左地圖，右圖表)
-document.getElementById('layoutSlider').addEventListener('input', (e) => {
-    const mapPct = e.target.value;
-    const chartPct = 100 - mapPct;
-    document.getElementById('map-panel-container').style.flex = `0 0 ${mapPct}%`;
-    document.getElementById('right-chart-panel').style.flex = `0 0 ${chartPct}%`;
-    mapChart.resize();
-    if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
-        barChart.resize(); 
-    }
-});
-
-// 🌟 字體縮放拉環 (避開 Canvas 以防點擊失效)
-window.adjustZoom = function(val) {
-    document.getElementById('fontSizeSlider').value = val;
-    document.getElementById('fontSizeSlider').dispatchEvent(new Event('input'));
-};
-document.getElementById('fontSizeSlider').addEventListener('input', (e) => {
-    globalFontScale = parseFloat(e.target.value);
-    
-    // 只對純文字 DOM 進行 zoom，絕對不縮放 Canvas 容器
-    document.querySelectorAll('.zoom-target').forEach(el => {
-        el.style.zoom = globalFontScale;
-    });
-
-    // 動態重繪 ECharts 並帶入字體放大率
-    updateMapTheme();
-    updateBarChart();
-});
-
-
 // 6. ECharts 繪圖核心
 function getMapValue(item) {
     if (currentMode === 'stats') return item.overall;
-    else if (currentMode === 'tire') return item.tire_history[6]; 
+    else if (currentMode === 'tire') return item.tire_history[6]; // 百分比決定地圖顏色
     else if (currentMode === 'operability') return item.operability;
     else if (currentMode === 'maintenance') return item.maintenance_rate; 
     else if (currentMode === 'simulation') return item[currentSimulationMetric + '_ratio']; 
@@ -294,7 +317,7 @@ function getVisualMapOption() {
 }
 
 function renderInitialMap() {
-    updateMapTheme(); // 直接依賴 updateMapTheme 的邏輯
+    updateMapTheme(); 
 }
 
 function updateMapTheme() {
@@ -320,11 +343,11 @@ function updateMapTheme() {
             { type: 'lines', coordinateSystem: 'geo', zlevel: 2, lineStyle: { color: isLightMode ? '#64748b' : '#94a3b8', width: 1.5, opacity: 0.6, curveness: 0.2 }, data: lineData }, 
             { 
                 type: 'scatter', coordinateSystem: 'geo', zlevel: 3, 
-                symbolSize: 0, // 🌟 神乎其技：把圓點隱藏，只留文字盒
+                symbolSize: 0, // 隱藏圓點，只留文字盒，解決連線尾端偏移
                 data: scatterData, itemStyle: { color: accentColor }, 
                 label: {
                     show: true, 
-                    position: 'center', // 🌟 將文字盒的「正中心」精準釘死線上尾端的座標！
+                    position: 'center', 
                     formatter: function(params) { 
                         if (currentMode === 'tire') return `{region|${params.name}}\n{score|${params.value[3]} 輛}`;
                         let unit = '%'; if(currentMode === 'stats') unit = '分';
@@ -332,7 +355,6 @@ function updateMapTheme() {
                     },
                     backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#cbd5e1' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4,
                     rich: { 
-                        // 🌟 套入 globalFontScale，讓 ECharts 內部文字與外部拉環同步放大！
                         region: { color: textColor, fontSize: 13 * globalFontScale, fontWeight: 'bold', align: 'center', padding: [0, 0, 4, 0] }, 
                         score: { color: accentColor, fontSize: 14 * globalFontScale, fontWeight: 'bold', align: 'center' } 
                     }
@@ -367,7 +389,7 @@ function updateBarChart() {
                 label: { show: false }, 
                 endLabel: { 
                     show: true, formatter: '{a} {c}%', color: 'inherit',
-                    fontSize: (isTop ? 14 : 11) * globalFontScale, // 🌟 同步放大
+                    fontSize: (isTop ? 14 : 11) * globalFontScale,
                     fontWeight: isTop ? 'bold' : 'normal'
                 },
                 zlevel: isTop ? 10 : 1
