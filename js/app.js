@@ -1,11 +1,13 @@
 // js/app.js
-// 🌟 預設為淺色模式
 let isLightMode = true; 
 let twGeoJson = null;
 let currentMode = 'stats'; 
 let showingFleetDetails = false;
 let showingSimDetails = false;
 let isDataView = false; 
+
+// 🌟 新增：圖表數值 / 變動率 切換開關
+let showVariance = false; 
 
 let currentStatsMetric = 'station';
 let currentMaintenanceMetric = 'maintenance_rate';
@@ -29,6 +31,7 @@ function renderSubButtons() {
                 document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentStatsMetric = metric.key;
+                showVariance = false; // 切換時重置
                 
                 document.getElementById('main-dashboard').classList.remove('full-width-map');
                 document.getElementById('floating-stats-area').classList.add('hidden');
@@ -50,6 +53,7 @@ function renderSubButtons() {
                 document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentMaintenanceMetric = metric.key;
+                showVariance = false; // 切換時重置
                 
                 if(currentMaintenanceMetric === 'm_info') {
                     document.getElementById('barChart').classList.add('hidden');
@@ -72,6 +76,8 @@ function renderSubButtons() {
                 document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentSimulationMetric = metric.key;
+                showVariance = false; // 切換時重置
+
                 updateMapTheme();
                 updateLegendBox();
                 updateBarChart(); 
@@ -92,6 +98,7 @@ function switchMode(mode, targetElement) {
     document.querySelectorAll('.top-nav button').forEach(btn => btn.classList.remove('active'));
     targetElement.classList.add('active');
     currentMode = mode;
+    showVariance = false; // 宇宙切換時重置
 
     const controlsArea = document.getElementById('button-container');
     const maintMetricsArea = document.getElementById('maintenance-metrics-area');
@@ -182,9 +189,11 @@ function toggleDataView() {
     }
 }
 
+// 🌟 雙向互動引擎：點擊表格或折線時互相高亮
 window.highlightTireData = function(region) {
     if (currentMode !== 'tire') return;
     
+    // 1. 讓左側表格反紅
     if (isDataView) {
         document.querySelectorAll('.clean-data-table tbody tr').forEach(tr => tr.classList.remove('row-highlight'));
         const targetRow = document.getElementById(`row-${region}`);
@@ -194,6 +203,7 @@ window.highlightTireData = function(region) {
         }
     }
 
+    // 2. 讓右側 ECharts 曲線發光 (觸發 emphasis)
     barChart.dispatchAction({ type: 'downplay' });
     barChart.dispatchAction({ type: 'highlight', seriesName: region });
     barChart.dispatchAction({
@@ -372,7 +382,7 @@ presentationBtn.addEventListener('click', async () => {
         }
         presentationBtn.classList.add('active');
         presentationBtn.innerText = '🖥️ 退出投影';
-        adjustZoom(2.0); // 🌟 最大可拉到 2.0 倍
+        adjustZoom(2.0); 
     } else {
         if (document.exitFullscreen && document.fullscreenElement) {
             document.exitFullscreen();
@@ -459,7 +469,7 @@ function updateMapTheme() {
         visualMap: getVisualMapOption(),
         series: [
             { type: 'map', geoIndex: 0, data: mapData }, 
-            { type: 'lines', coordinateSystem: 'geo', zlevel: 2, lineStyle: { color: isLightMode ? '#94a3b8' : '#64748b', width: 1.5, opacity: 0.6, curveness: 0.2 }, data: lineData }, // 🌟 加深連線顏色
+            { type: 'lines', coordinateSystem: 'geo', zlevel: 2, lineStyle: { color: isLightMode ? '#94a3b8' : '#64748b', width: 1.5, opacity: 0.6, curveness: 0.2 }, data: lineData }, 
             { 
                 type: 'scatter', coordinateSystem: 'geo', zlevel: 3, 
                 symbolSize: 0, 
@@ -472,7 +482,7 @@ function updateMapTheme() {
                         let unit = '%'; if(currentMode === 'stats') unit = '分';
                         return `{region|${params.name}}\n{score|${params.value[2]} ${unit}}`; 
                     },
-                    backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#94a3b8' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4, // 🌟 加深白底框線
+                    backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#94a3b8' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4,
                     rich: { 
                         region: { color: textColor, fontSize: 13 * globalFontScale, fontWeight: 'bold', align: 'center', padding: [0, 0, 4, 0] }, 
                         score: { color: accentColor, fontSize: 14 * globalFontScale, fontWeight: 'bold', align: 'center' } 
@@ -483,6 +493,7 @@ function updateMapTheme() {
     }, false); 
 }
 
+// 🌟 圖表核心渲染 (加入變動率切換邏輯)
 function updateBarChart() {
     if (!twGeoJson || (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info')) return;
     
@@ -498,7 +509,6 @@ function updateBarChart() {
         const regions = sortedData.map(item => item.region);
         const months = ['25/11', '25/12', '26/01', '26/02', '26/03', '26/04'];
         
-        // 🌟 修正警戒色盤 (更濃郁、更高對比度)
         const dangerColors = ['#e11d48', '#be185d', '#7e22ce', '#b45309', '#a21caf', '#c2410c', '#1d4ed8'];
         let colorIdx = 0;
         const seriesData = [];
@@ -506,12 +516,18 @@ function updateBarChart() {
         sortedData.forEach((item, index) => {
             let val = item.tire_history[6];
             let isBad = val > 4.5; 
-            let lineColor = isBad ? dangerColors[colorIdx++ % dangerColors.length] : (isLightMode ? '#94a3b8' : '#475569'); // 🌟 加深安全色的灰度
+            let lineColor = isBad ? dangerColors[colorIdx++ % dangerColors.length] : (isLightMode ? '#94a3b8' : '#475569');
 
             seriesData.push({
                 name: item.region, type: 'line', data: item.tire_history.slice(1), smooth: true, symbol: isBad ? 'circle' : 'none', symbolSize: 8,
                 lineStyle: { width: isBad ? 4 : 2, opacity: isBad ? 1 : 0.4 },
                 itemStyle: { color: lineColor },
+                // 🌟 新增：Hover 或外部 Focus 時的高亮效果 (發光加粗)
+                emphasis: {
+                    focus: 'series',
+                    lineStyle: { width: 7, shadowBlur: 15, shadowColor: lineColor, opacity: 1 },
+                    label: { show: true, fontSize: 16 * globalFontScale, fontWeight: 'bold' }
+                },
                 label: { show: false }, 
                 endLabel: { 
                     show: true, formatter: '{a} {c}%', color: 'inherit',
@@ -535,78 +551,68 @@ function updateBarChart() {
         return;
     }
 
-    let regions, currentValues, previousValues, chartTitle, avgValue, isPercentage = false;
+    let regions, currentValues, previousValues, varianceValues, chartTitle, avgValue, isPercentage = false;
 
-    // 🌟 核心修改：全面將排序改為「最差的放最左側」
+    // 取得變數顏色的邏輯判斷
+    const getVarColor = (val) => {
+        if (val === 0) return isLightMode ? '#94a3b8' : '#475569';
+        if (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_accident') return val > 0 ? dangerColor : safeColor;
+        if (currentMode === 'simulation') return val > 0 ? dangerColor : safeColor;
+        return val > 0 ? safeColor : dangerColor;
+    };
+
     if (currentMode === 'stats') {
-        // 低分(差) 放前面
         const sortedData = [...rawData].sort((a, b) => a[currentStatsMetric] - b[currentStatsMetric]);
-        regions = sortedData.map(item => item.region); currentValues = sortedData.map(item => item[currentStatsMetric]); previousValues = sortedData.map(item => item[currentStatsMetric + '_feb']);
-        chartTitle = `各區指標對比 - ${statsMetrics.find(m => m.key === currentStatsMetric).label} (由低至高)`;
-        avgValue = (currentValues.reduce((acc, curr) => acc + curr, 0) / currentValues.length).toFixed(1);
+        regions = sortedData.map(item => item.region); 
+        currentValues = sortedData.map(item => item[currentStatsMetric]); 
+        previousValues = sortedData.map(item => item[currentStatsMetric + '_feb']);
+        varianceValues = sortedData.map(item => parseFloat((item[currentStatsMetric] - item[currentStatsMetric + '_feb']).toFixed(2)));
+        chartTitle = `各區指標對比 - ${statsMetrics.find(m => m.key === currentStatsMetric).label}`;
     } else if (currentMode === 'operability') {
         isPercentage = true;
-        // 低可動率(差) 放前面
         const sortedData = [...rawData].sort((a, b) => a.operability - b.operability);
-        regions = sortedData.map(item => item.region); currentValues = sortedData.map(item => item.operability); previousValues = sortedData.map(item => item.operability_feb);
-        chartTitle = `各縣市場站可動率對比 (由低至高)`;
-        avgValue = (currentValues.reduce((acc, curr) => acc + curr, 0) / currentValues.length).toFixed(2);
+        regions = sortedData.map(item => item.region); 
+        currentValues = sortedData.map(item => item.operability); 
+        previousValues = sortedData.map(item => item.operability_feb);
+        varianceValues = sortedData.map(item => parseFloat((item.operability - item.operability_feb).toFixed(2)));
+        chartTitle = `各縣市場站可動率對比`;
     } else if (currentMode === 'maintenance') {
         isPercentage = currentMaintenanceMetric === 'maintenance_rate';
-        // 事故數: 高(差)放前 / 維護率或記錄數: 低(差)放前
-        const sortLogic = currentMaintenanceMetric === 'm_accident' 
-            ? (a, b) => b[currentMaintenanceMetric] - a[currentMaintenanceMetric] 
-            : (a, b) => a[currentMaintenanceMetric] - b[currentMaintenanceMetric];
+        const sortLogic = currentMaintenanceMetric === 'm_accident' ? (a, b) => b[currentMaintenanceMetric] - a[currentMaintenanceMetric] : (a, b) => a[currentMaintenanceMetric] - b[currentMaintenanceMetric];
         const sortedData = [...rawData].sort(sortLogic);
-        regions = sortedData.map(item => item.region); currentValues = sortedData.map(item => item[currentMaintenanceMetric]); previousValues = sortedData.map(item => item[currentMaintenanceMetric + '_feb']);
+        regions = sortedData.map(item => item.region); 
+        currentValues = sortedData.map(item => item[currentMaintenanceMetric]); 
+        previousValues = sortedData.map(item => item[currentMaintenanceMetric + '_feb']);
+        varianceValues = sortedData.map(item => parseFloat((item[currentMaintenanceMetric] - item[currentMaintenanceMetric + '_feb']).toFixed(2)));
         chartTitle = `各縣市${maintenanceMetrics.find(m => m.key === currentMaintenanceMetric).label}對比`;
-        avgValue = (currentValues.reduce((acc, curr) => acc + curr, 0) / currentValues.length).toFixed(isPercentage ? 2 : 0);
     } else if (currentMode === 'simulation') {
         isPercentage = true;
-        // 異常佔比高(差) 放前面
         const sortedData = [...rawData].sort((a, b) => b[currentSimulationMetric + '_ratio'] - a[currentSimulationMetric + '_ratio']);
         regions = sortedData.map(item => item.region); 
         currentValues = sortedData.map(item => item[currentSimulationMetric + '_ratio']); 
         previousValues = sortedData.map(item => item[currentSimulationMetric + '_lm']);
-        chartTitle = `${simulationMetrics.find(m => m.key === currentSimulationMetric).label}異常占比對比 (由高至低)`;
-        avgValue = (currentValues.reduce((acc, curr) => acc + curr, 0) / currentValues.length).toFixed(1);
+        varianceValues = sortedData.map(item => parseFloat((item[currentSimulationMetric + '_ratio'] - item[currentSimulationMetric + '_lm']).toFixed(2)));
+        chartTitle = `${simulationMetrics.find(m => m.key === currentSimulationMetric).label}異常占比對比`;
     }
 
-    barChart.setOption({
-        title: { text: chartTitle, left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } },
-        tooltip: { 
-            trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor },
-            formatter: function(params) {
-                let html = `<div style="font-weight:bold;margin-bottom:5px;">${params[0].axisValue}</div>`;
-                let valPrev = params[0].value;
-                let valCurr = params[1].value;
-                
-                params.forEach(p => { html += `${p.marker} ${p.seriesName}: <b style="color:${p.color}">${p.value}${isPercentage ? '%' : ''}</b><br/>`; });
-                
-                let diff = (valCurr - valPrev).toFixed(isPercentage ? 2 : 0);
-                let diffSign = diff > 0 ? '+' : '';
-                let isBetter = false;
-                
-                if(currentMode === 'maintenance' && currentMaintenanceMetric === 'm_accident') isBetter = diff <= 0;
-                else if(currentMode === 'simulation') isBetter = diff <= 0;
-                else isBetter = diff >= 0;
-                
-                let diffColor = isBetter ? safeColor : dangerColor;
-                
-                html += `<div style="margin-top:5px; border-top:1px solid ${isLightMode?'#cbd5e1':'#334155'}; padding-top:5px; font-size:12px;">較上月變動: <b style="color:${diffColor}">${diffSign}${diff}${isPercentage ? '%' : ''}</b></div>`;
-                return html;
-            }
-        },
-        legend: { data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: textColor, fontSize: 12 * globalFontScale } },
-        grid: { left: '3%', right: '8%', bottom: '15%', top: '15%', containLabel: true },
-        xAxis: { type: 'category', data: regions, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
-        yAxis: { type: 'value', min: function(val) { return isPercentage ? Math.max(0, Math.floor(val.min - 5)) : 0; }, axisLabel: { color: textColor, formatter: isPercentage ? '{value} %' : '{value}', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
-        series: [
-            // 🌟 將原本 3月的 #cbd5e1 加深為 #94a3b8，避免白底看不清
+    let displayData = showVariance ? varianceValues : currentValues;
+    avgValue = (displayData.reduce((acc, curr) => acc + curr, 0) / displayData.length).toFixed(isPercentage ? 2 : 1);
+
+    // 🌟 組合動態長條圖的 Series
+    let seriesConfig = [];
+    if (showVariance) {
+        seriesConfig = [{
+            name: '較上月變動', type: 'bar', barWidth: '40%', itemStyle: { borderRadius: [4, 4, 0, 0] },
+            data: varianceValues.map(val => ({ value: val, itemStyle: { color: getVarColor(val) } })),
+            label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: val => (val.value > 0 ? '+' : '') + val.value + (isPercentage?'%':''), fontSize: 13 * globalFontScale },
+            markLine: { symbol: 'none', data: [{ type: 'average', name: '平均變動' }], label: { formatter: `平均\n${avgValue > 0 ? '+':''}${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
+        }];
+    } else {
+        seriesConfig = [
             { name: '3月 (前月)', type: 'bar', barWidth: '30%', itemStyle: { color: isLightMode ? '#94a3b8' : '#475569', borderRadius: [4, 4, 0, 0] }, label: { show: false }, data: previousValues },
             {
                 name: '4月 (當月)', type: 'bar', barWidth: '30%', itemStyle: { borderRadius: [4, 4, 0, 0] },
-                data: currentValues.map(val => {
+                data: currentValues.map((val, idx) => {
                     let barColor = accentColor;
                     if (currentMode === 'stats' || currentMode === 'operability') barColor = val < avgValue ? dangerColor : accentColor;
                     else if (currentMode === 'simulation') barColor = val > avgValue ? dangerColor : safeColor;
@@ -619,11 +625,40 @@ function updateBarChart() {
                 label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: isPercentage ? '{c}%' : '{c}', fontSize: 12 * globalFontScale },
                 markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `4月平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
             }
-        ]
+        ];
+    }
+
+    barChart.setOption({
+        title: { 
+            text: chartTitle + (showVariance ? ' - 較上月變動' : ' - 本月數值'), 
+            subtext: '💡 點擊圖表任意處切換【本月數值】與【較上月變動】', // 🌟 加入點擊提示語
+            subtextStyle: { color: accentColor, fontSize: 12 * globalFontScale, fontWeight: 'bold' },
+            left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } 
+        },
+        tooltip: { 
+            trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor },
+            formatter: function(params) {
+                let html = `<div style="font-weight:bold;margin-bottom:5px;">${params[0].axisValue}</div>`;
+                params.forEach(p => { html += `${p.marker} ${p.seriesName}: <b style="color:${p.color}">${(p.value > 0 && showVariance ? '+' : '')}${p.value}${isPercentage ? '%' : ''}</b><br/>`; });
+                return html;
+            }
+        },
+        legend: { show: !showVariance, data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: textColor, fontSize: 12 * globalFontScale } },
+        grid: { left: '3%', right: '8%', bottom: '15%', top: '18%', containLabel: true },
+        xAxis: { type: 'category', data: regions, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
+        yAxis: { type: 'value', min: function(val) { return (isPercentage && !showVariance) ? Math.max(0, Math.floor(val.min - 5)) : null; }, axisLabel: { color: textColor, formatter: isPercentage ? '{value} %' : '{value}', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
+        series: seriesConfig
     }, true);
 }
 
-// 🌟 折線圖點擊追蹤
+// 🌟 點擊長條圖任意處，一鍵切換「本月數值 / 變動率」
+barChart.getZr().on('click', function(event) {
+    if (currentMode === 'tire') return; // 胎壓有自己的連動邏輯
+    showVariance = !showVariance;
+    updateBarChart();
+});
+
+// 🌟 折線圖點擊追蹤 (觸發 Emphasis 與表格連動)
 barChart.on('click', function(params) {
     if (currentMode === 'tire' && params.seriesType === 'line') {
         if (!isDataView) {
