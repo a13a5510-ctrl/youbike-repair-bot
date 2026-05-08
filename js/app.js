@@ -130,6 +130,9 @@ function switchMode(mode, targetElement) {
     updateMapTheme(); 
     toggleDataView();
     
+    // 🌟 切換分頁時，套用目前的版面配置
+    applyLayoutState();
+    
     setTimeout(() => {
         mapChart.resize();
         if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
@@ -139,45 +142,49 @@ function switchMode(mode, targetElement) {
     }, 350);
 }
 
-// 🌟 單/雙擊 佈局切換引擎
-let layoutState = 'split'; 
-let layoutClickCount = 0;
-let layoutClickTimer = null;
+// 🌟 三段式 佈局切換引擎
+let layoutState = 'split'; // 狀態：'split', 'left', 'right'
 
 document.getElementById('layoutToggleBtn').addEventListener('click', () => {
-    layoutClickCount++;
-    if (layoutClickCount === 1) {
-        layoutClickTimer = setTimeout(() => {
-            // 單擊邏輯：左右輪播
-            if (layoutState === 'split' || layoutState === 'right') layoutState = 'left';
-            else if (layoutState === 'left') layoutState = 'right';
-            applyLayoutState();
-            layoutClickCount = 0;
-        }, 250); // 250ms 判定雙擊時間
-    } else if (layoutClickCount === 2) {
-        // 雙擊邏輯：恢復雙拼
-        clearTimeout(layoutClickTimer);
-        layoutState = 'split';
-        applyLayoutState();
-        layoutClickCount = 0;
-    }
+    if (layoutState === 'split') layoutState = 'left';
+    else if (layoutState === 'left') layoutState = 'right';
+    else layoutState = 'split';
+    applyLayoutState();
 });
 
 function applyLayoutState() {
     const left = document.getElementById('map-panel-container');
     const right = document.getElementById('right-chart-panel');
-    
-    if (layoutState === 'split') {
-        left.style.display = ''; left.style.flex = '1';
-        right.style.display = ''; right.style.flex = '1';
-    } else if (layoutState === 'left') {
-        left.style.display = ''; left.style.flex = '1';
+    const btn = document.getElementById('layoutToggleBtn');
+
+    // 如果是首頁且未點擊子按鈕，強制只有左區
+    if (currentMode === 'stats' && currentStatsMetric === '') {
+        btn.style.display = 'none';
+        left.style.display = 'flex';
         right.style.display = 'none';
+        return;
+    } else {
+        btn.style.display = 'inline-block';
+    }
+
+    if (layoutState === 'split') {
+        left.style.display = 'flex';
+        right.style.display = 'flex';
+        btn.innerText = '🔀 雙拼視圖';
+    } else if (layoutState === 'left') {
+        left.style.display = 'flex';
+        right.style.display = 'none';
+        btn.innerText = '🗺️ 滿版左區';
     } else if (layoutState === 'right') {
         left.style.display = 'none';
-        right.style.display = ''; right.style.flex = '1';
+        right.style.display = 'flex';
+        btn.innerText = '📊 滿版右區';
     }
-    setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150);
+
+    setTimeout(() => { 
+        if(mapChart) mapChart.resize(); 
+        if(barChart) barChart.resize(); 
+    }, 150);
 }
 
 document.getElementById('mapDataToggleBtn').addEventListener('click', (e) => {
@@ -192,6 +199,7 @@ varianceToggleBtn.addEventListener('click', () => {
     updateBarChart();
 });
 
+// 🌟 修復圖示消失 Bug，只改 Text Span
 function updateVarianceBtnUI() {
     if (currentMode === 'tire' || currentMode === 'stats' && currentStatsMetric === '') {
         varianceToggleBtn.classList.add('hidden');
@@ -199,6 +207,7 @@ function updateVarianceBtnUI() {
     }
     varianceToggleBtn.classList.remove('hidden');
     document.getElementById('varianceToggleText').innerText = showVariance ? '還原數值' : '較上月變動';
+    document.querySelector('#varianceToggleBtn .btn-icon').innerText = showVariance ? '🔙' : '🔄';
     varianceToggleBtn.classList.toggle('active-mode', showVariance);
 }
 
@@ -220,6 +229,8 @@ function toggleDataView() {
     }
 
     toggleBtn.classList.remove('hidden');
+    
+    // 🌟 修復圖示消失 Bug
     document.getElementById('mapDataToggleText').innerText = isDataView ? '切換地圖顯示' : '切換數據報表';
     document.querySelector('#mapDataToggleBtn .btn-icon').innerText = isDataView ? '🗺️' : '📋';
     
@@ -300,14 +311,12 @@ function renderDataView() {
     let title = document.querySelector('.top-nav button.active').innerText;
     let html = `<h3 style="margin-top:0; color:var(--accent-color); border-bottom:1px solid var(--border-color); padding-bottom:10px;">${title} - 各縣市明細報表</h3>`;
     
-    // 如果是模擬體驗，加入雙擊提示
     if(currentMode === 'simulation') {
         html += `<div style="font-size:12px; color:var(--warning-color); margin-bottom:10px;">💡 提示：雙擊縣市列可顯示 A/B/C 級異常詳細分析</div>`;
     }
     
     html += '<table class="clean-data-table"><thead><tr>';
 
-    // 🌟 在每個 <tr> 埋入 onclick 與 ondblclick
     const trStr = (r) => `<tr id="row-${r.region}" onclick="highlightRow('${r.region}')" ondblclick="handleRowDblClick('${r.region}')">`;
 
     if (currentMode === 'stats') {
@@ -442,58 +451,6 @@ document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     e.target.innerText = isLightMode ? '🌙 深色模式' : '🌞 淺色模式';
     updateMapTheme();  
     if(currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info') updateBarChart(); 
-});
-
-let isPresentationMode = false;
-const presentationBtn = document.getElementById('presentationToggleBtn');
-
-presentationBtn.addEventListener('click', async () => {
-    isPresentationMode = !isPresentationMode;
-    
-    if (isPresentationMode) {
-        if (document.documentElement.requestFullscreen) {
-            await document.documentElement.requestFullscreen().catch(() => {});
-        }
-        presentationBtn.classList.add('active');
-        presentationBtn.innerText = '🖥️ 退出投影';
-        adjustZoom(2.0); 
-    } else {
-        if (document.exitFullscreen && document.fullscreenElement) {
-            document.exitFullscreen();
-        }
-        presentationBtn.classList.remove('active');
-        presentationBtn.innerText = '📺 投影模式';
-        adjustZoom(1);
-    }
-    
-    setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150);
-});
-
-document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && isPresentationMode) {
-        presentationBtn.click(); 
-    }
-});
-
-let isLaserMode = false;
-const laserDot = document.getElementById('laser-dot');
-document.getElementById('laserToggleBtn').addEventListener('click', (e) => {
-    isLaserMode = !isLaserMode;
-    document.body.classList.toggle('laser-active', isLaserMode);
-    
-    if (isLaserMode) {
-        e.target.classList.add('active');
-        e.target.innerText = '❌ 關閉雷射';
-        laserDot.classList.add('active');
-    } else {
-        e.target.classList.remove('active');
-        e.target.innerText = '🔴 雷射筆';
-        laserDot.classList.remove('active');
-    }
-});
-
-document.addEventListener('mousemove', (e) => {
-    if (isLaserMode) laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`;
 });
 
 function getMapValue(item) {
@@ -716,41 +673,7 @@ function updateBarChart() {
     }, true);
 }
 
-function setupMapClickEvent() {
-    mapChart.on('click', function(params) {
-        let clickedRegion = null;
-        if (params.seriesType === 'map') clickedRegion = rawData.find(r => r.mapNames.includes(params.name));
-        else if (params.seriesType === 'scatter') clickedRegion = rawData.find(r => r.region === params.name);
-
-        if (clickedRegion) {
-            const panel = document.getElementById('cityDetailPanel');
-            if (currentMode === 'stats') {
-                document.getElementById('detail-title').innerText = `${clickedRegion.region} 指標細節 (4月)`;
-                document.getElementById('detail-content').innerHTML = `<div class="detail-row"><span>綜合分數:</span><span style="color:var(--accent-color); font-weight:bold;">${clickedRegion.overall}</span></div><div class="detail-row"><span>場站妥善度:</span><span>${clickedRegion.station}</span></div><div class="detail-row"><span>外觀標示:</span><span>${clickedRegion.appearance}</span></div><div class="detail-row"><span>重要機能:</span><span>${clickedRegion.functionality}</span></div><div class="detail-row"><span>EMS維護率:</span><span>${clickedRegion.ems}%</span></div><div class="detail-row"><span>可動率:</span><span>${clickedRegion.operability}%</span></div>`;
-            } else if (currentMode === 'tire') {
-                document.getElementById('detail-title').innerText = `${clickedRegion.region} 胎壓未達標趨勢`;
-                document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>月份</span><span>未達標率</span></div><div class="detail-row"><span>25年 11月:</span><span>${clickedRegion.tire_history[1]}%</span></div><div class="detail-row"><span>25年 12月:</span><span>${clickedRegion.tire_history[2]}%</span></div><div class="detail-row"><span>26年 01月:</span><span>${clickedRegion.tire_history[3]}%</span></div><div class="detail-row"><span>26年 02月:</span><span>${clickedRegion.tire_history[4]}%</span></div><div class="detail-row"><span>26年 03月:</span><span>${clickedRegion.tire_history[5]}%</span></div><div class="detail-row" style="font-weight:bold; color:var(--accent-color);"><span>26年 04月:</span><span>${clickedRegion.tire_history[6]}% (${clickedRegion.tire_count}輛)</span></div>`;
-            } else if (currentMode === 'operability') {
-                let variance = (clickedRegion.operability - clickedRegion.operability_feb).toFixed(2);
-                let varianceSign = variance > 0 ? '+' : '';
-                document.getElementById('detail-title').innerText = `${clickedRegion.region} 月度可動率分析`;
-                document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>項目</span><span>數值</span></div><div class="detail-row"><span>3月可動率:</span><span>${clickedRegion.operability_feb.toFixed(2)}%</span></div><div class="detail-row" style="font-weight:bold; color:var(--accent-color);"><span>4月可動率:</span><span>${clickedRegion.operability.toFixed(2)}%</span></div><div class="detail-row"><span>月度變動:</span><span style="color:${variance < 0 ? 'var(--danger-color)' : 'var(--safe-color)'}; font-weight:bold;">${varianceSign}${variance}%</span></div>`;
-            } else if (currentMode === 'maintenance') {
-                document.getElementById('detail-title').innerText = `${clickedRegion.region} 事故與維護統計`;
-                document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>項目</span><span>數值</span></div><div class="detail-row"><span>總營運車輛:</span><span>${clickedRegion.m_fleet.toLocaleString()} 輛</span></div><div class="detail-row"><span style="color:var(--danger-color);">事故車輛數:</span><span style="color:var(--danger-color); font-weight:bold;">${clickedRegion.m_accident} 輛</span></div><div class="detail-row"><span>維護記錄數:</span><span>${clickedRegion.m_records.toLocaleString()} 筆</span></div><div class="detail-row" style="font-weight:bold; color:var(--accent-color);"><span>一級維護率:</span><span>${clickedRegion.maintenance_rate}%</span></div><div class="detail-row"><span>較上月變動:</span><span style="color:${clickedRegion.m_var.includes('-') ? 'var(--danger-color)' : 'var(--safe-color)'}; font-weight:bold;">${clickedRegion.m_var}</span></div>`;
-            } else if (currentMode === 'simulation') {
-                document.getElementById('detail-title').innerText = `${clickedRegion.region} 本月模擬體驗總覽`;
-                document.getElementById('detail-content').innerHTML = `<div class="detail-row" style="border-bottom:1px solid var(--border-color); padding-bottom:5px; margin-bottom:5px; color:var(--text-secondary);"><span>異常別</span><span>數量 (佔比)</span></div><div class="detail-row"><span>A級異常:</span><span style="color: ${clickedRegion.sim_a_ratio > 5.0 ? 'var(--danger-color)' : 'var(--text-primary)'}; font-weight:bold;">${clickedRegion.sim_a_count} 輛 (${clickedRegion.sim_a_ratio}%)</span></div><div class="detail-row"><span>B級異常:</span><span style="color: ${clickedRegion.sim_b_ratio > 20.0 ? 'var(--danger-color)' : 'var(--text-primary)'}; font-weight:bold;">${clickedRegion.sim_b_count} 輛 (${clickedRegion.sim_b_ratio}%)</span></div><div class="detail-row"><span>C級異常:</span><span style="color: ${clickedRegion.sim_c_ratio > 50.0 ? 'var(--danger-color)' : 'var(--text-primary)'}; font-weight:bold;">${clickedRegion.sim_c_count} 輛 (${clickedRegion.sim_c_ratio}%)</span></div>`;
-            }
-            panel.style.display = 'block';
-        }
-    });
-
-    mapChart.getZr().on('click', function(event) {
-        if (!event.target) document.getElementById('cityDetailPanel').style.display = 'none';
-    });
-}
-
+// 初始化佈局與圖表
 async function initDashboard() {
     try {
         const response = await fetch('https://raw.githubusercontent.com/g0v/twgeojson/master/json/twCounty2010.geo.json');
@@ -763,9 +686,7 @@ async function initDashboard() {
         renderSubButtons();
         renderFleetDetails(); 
         updateLegendBox();
-        
-        document.getElementById('main-dashboard').classList.add('full-width-map');
-        document.getElementById('floating-stats-area').classList.remove('hidden');
+        applyLayoutState(); // 初始化佈局狀態
         
         renderInitialMap();
         updateBarChart();
