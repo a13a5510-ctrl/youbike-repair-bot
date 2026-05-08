@@ -1,39 +1,210 @@
-/* --- 投影機型號選單樣式 --- */
-.projector-select {
-    background: var(--panel-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    border-radius: 6px;
-    padding: 5px;
-    font-size: 13px;
-    outline: none;
-    cursor: pointer;
-    margin-right: 8px;
+/* css/style.css */
+
+/* --- 深色模式變數 (預設) --- */
+:root {
+    --bg-color: #0b1120;
+    --panel-bg: rgba(30, 41, 59, 0.7);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent-color: #38bdf8;
+    --danger-color: #f43f5e;
+    --warning-color: #f59e0b;
+    --safe-color: #10b981;
+    --border-color: #334155;
+    --chart-grid: #1e293b;
+    --map-base: #1e293b;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
+
+/* --- 淺色科技感模式變數 --- */
+body.light-mode {
+    --bg-color: #e2e8f0;
+    --panel-bg: rgba(255, 255, 255, 0.6);
+    --text-primary: #0f172a; 
+    --text-secondary: #334155; 
+    --accent-color: #2563eb;
+    --danger-color: #e11d48;
+    --warning-color: #d97706;
+    --safe-color: #059669;
+    --border-color: rgba(148, 163, 184, 0.4);
+    --chart-grid: rgba(148, 163, 184, 0.2);
+    --map-base: #cbd5e1;
+}
+
+/* --- 基礎排版 --- */
+body {
+    margin: 0; padding: 0; height: 100vh;
+    background-color: var(--bg-color); color: var(--text-primary);
+    font-family: var(--font-family); display: flex; flex-direction: column;
+    overflow: hidden; transition: background-color 0.3s, color 0.3s;
+}
+
+.header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 20px; background: var(--panel-bg); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color); z-index: 10;
+}
+.header h1 { margin: 0; font-size: 20px; color: var(--accent-color); }
+.header-tools { display: flex; gap: 10px; align-items: center; }
+
+/* --- 導覽列與子選單 --- */
+.top-nav, .controls {
+    display: flex; gap: 10px; padding: 10px 20px;
+    background: var(--bg-color); flex-wrap: wrap;
+}
+.top-nav button, .controls button {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    color: var(--text-secondary); padding: 8px 16px; border-radius: 6px;
+    cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 14px;
+}
+.top-nav button:hover, .controls button:hover {
+    border-color: var(--accent-color); color: var(--accent-color);
+}
+.top-nav button.active, .controls button.active {
+    background: var(--accent-color); color: #fff; border-color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.hidden { display: none !important; }
+
+/* --- 主儀表板與區塊佈局 --- */
+.dashboard {
+    display: flex; flex: 1; overflow: hidden; padding: 10px; gap: 10px;
+    transition: all 0.3s ease;
+}
+.panel {
+    background: var(--panel-bg); backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color); border-radius: 12px;
+    position: relative; display: flex; flex-direction: column; overflow: hidden;
+}
+#map-panel-container { flex: 1; transition: flex 0.2s ease-out; }
+#right-chart-panel { flex: 1; padding: 15px; transition: flex 0.2s ease-out; }
+.chart-container { flex: 1; width: 100%; min-height: 300px; }
+
+/* 滿版地圖模式 (第一宇宙專用) */
+.full-width-map #map-panel-container { flex: 100% !important; }
+.full-width-map #right-chart-panel { display: none; }
+
+/* --- 浮動資訊面板 --- */
+.legend-box {
+    position: absolute; bottom: 20px; left: 20px; z-index: 10;
+    background: var(--panel-bg); backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color); border-radius: 8px;
+    padding: 12px; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.legend-item { display: flex; align-items: center; margin-top: 6px; }
+.color-box { width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; }
+
+.city-detail-panel {
+    position: absolute; top: 20px; left: 20px; z-index: 10;
+    background: var(--panel-bg); backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color); border-radius: 10px;
+    padding: 15px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    min-width: 200px; animation: fadeIn 0.3s;
+}
+.city-detail-panel h4 { margin: 0 0 12px 0; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; font-size: 16px; }
+.detail-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+
+.floating-base-metrics {
+    position: absolute; top: 20px; right: 20px; z-index: 10;
+    background: var(--panel-bg); backdrop-filter: blur(15px);
+    border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 300px;
+}
+
+/* --- 數據卡片 --- */
+.base-metrics-wrapper { margin-bottom: 15px; }
+.base-metrics-grid { display: grid; gap: 10px; margin-bottom: 15px; }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-5 { grid-template-columns: repeat(5, 1fr); gap: 5px; }
+
+.metric-card {
+    background: var(--bg-color); border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 12px; text-align: center;
+}
+.metric-card.alert { border-color: var(--danger-color); box-shadow: 0 0 8px rgba(244, 63, 94, 0.2); }
+.metric-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+.metric-value { font-size: 18px; font-weight: bold; color: var(--accent-color); }
+.metric-card.alert .metric-value { color: var(--danger-color); }
+
+.hover-glow:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    transform: translateY(-2px); transition: all 0.2s;
+}
+
+/* --- 維護補充說明區 --- */
+.info-card { background: rgba(128, 128, 128, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+.info-card h4 { margin: 0 0 10px 0; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+.info-card ul { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; }
+.info-card li { margin-bottom: 5px; }
+.info-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
+.info-table th { background: rgba(56, 189, 248, 0.1); padding: 6px; border: 1px solid var(--border-color); color: var(--text-primary); }
+.info-table td { padding: 6px; border: 1px solid var(--border-color); color: var(--text-secondary); }
+.info-table .highlight { background: rgba(234, 179, 8, 0.2); font-weight: bold; color: var(--warning-color); }
+.alert-banner { background: rgba(244, 63, 94, 0.15); border-left: 4px solid var(--danger-color); padding: 10px 15px; margin-bottom: 15px; border-radius: 0 4px 4px 0; font-size: 14px; font-weight: bold; color: var(--danger-color); }
+.highlight-text { background: rgba(234, 179, 8, 0.2); padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+
+.loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--accent-color); font-size: 18px; font-weight: bold; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- 雙拉環控制台與投影型號選單 --- */
+.slider-container {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    padding: 0 10px; border-radius: 6px; height: 33px; margin-right: 5px; 
+}
+.slider-container input[type="range"] {
+    width: 60px; cursor: pointer; accent-color: var(--accent-color); 
+}
+.slider-icon { font-size: 14px; }
+.slider-btn { 
+    font-size: 14px; font-weight: bold; cursor: pointer; 
+    color: var(--text-primary); transition: 0.2s; 
+}
+.slider-btn:hover { color: var(--accent-color); text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
+
+.projector-select {
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    color: var(--text-primary); border-radius: 6px; padding: 5px 8px;
+    font-size: 13px; outline: none; cursor: pointer; margin-right: 5px;
+    height: 33px;
+}
+
+/* --- 右上角工具按鈕樣式 (全區方格化) --- */
+.header-tools button {
+    border-radius: 6px !important; background: var(--panel-bg);
+    border: 1px solid var(--border-color); color: var(--text-primary);
+    padding: 6px 12px; height: 33px; cursor: pointer; transition: all 0.3s ease;
+}
+.header-tools button:hover {
+    background: rgba(56, 189, 248, 0.15); border-color: var(--accent-color);
+}
+
+/* 投影模式 & 雷射筆：開啟時同步為「警示橘」 */
+button.presentation-toggle.active,
+button.laser-toggle.active {
+    background-color: var(--warning-color) !important; 
+    border-color: var(--warning-color) !important;
+    color: #ffffff !important; font-weight: bold;
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); 
+}
+
+/* --- 雷射點特效 --- */
+.laser-dot {
+    position: fixed; top: 0; left: 0; width: 16px; height: 16px;
+    background-color: #ff0000; border-radius: 50%; pointer-events: none; z-index: 999999;
+    box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000;
+    opacity: 0; display: none;
+}
+.laser-dot.active { display: block; opacity: 1; }
+body.laser-active, body.laser-active * { cursor: none !important; }
 
 /* --- 🌟 沉浸式投影模式核心樣式 --- */
-body.full-projection-active {
-    overflow: hidden !important;
-}
-
-/* 開啟投影時，隱藏標題列 */
-body.full-projection-active .header {
-    display: none !important;
-}
-
-/* 投影時讓 Dashboard 填滿整個螢幕 */
+body.full-projection-active { overflow: hidden !important; background: #000 !important; }
+body.full-projection-active .header { display: none !important; }
 body.full-projection-active .dashboard {
-    height: 100vh !important;
-    width: 100vw !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 9999;
-}
-
-/* 投影時背景色強制深色，增加對比 */
-body.full-projection-active {
-    background: #000 !important;
+    height: 100vh !important; width: 100vw !important;
+    padding: 0 !important; margin: 0 !important;
+    position: fixed; top: 0; left: 0; z-index: 9999;
 }
