@@ -13,10 +13,16 @@
         <h1>維修維護提升改善會議 2026/04 資訊</h1>
         <div class="header-tools">
             
+            <div class="slider-container" title="調整地圖與圖表的左右比例">
+                <span class="slider-icon">🗺️</span>
+                <input type="range" id="layoutSlider" min="30" max="70" step="1" value="50">
+                <span class="slider-icon">📊</span>
+            </div>
+
             <div class="slider-container" title="調整整體畫面與字體大小">
-                <span style="font-size: 16px; font-weight: bold; color: var(--text-primary); cursor: pointer;" onclick="document.getElementById('fontSizeSlider').value=1.5; document.getElementById('fontSizeSlider').dispatchEvent(new Event('input'));">A+</span>
+                <span class="slider-btn" onclick="adjustZoom(1.5)">A+</span>
                 <input type="range" id="fontSizeSlider" min="0.8" max="1.5" step="0.05" value="1" dir="rtl">
-                <span style="font-size: 12px; font-weight: bold; color: var(--text-primary); cursor: pointer;" onclick="document.getElementById('fontSizeSlider').value=0.8; document.getElementById('fontSizeSlider').dispatchEvent(new Event('input'));">A-</span>
+                <span class="slider-btn" onclick="adjustZoom(0.8)">A-</span>
             </div>
 
             <button class="laser-toggle" id="laserToggleBtn" title="開啟雷射筆效果">🔴 雷射筆</button>
@@ -25,21 +31,21 @@
         </div>
     </div>
 
-    <div class="top-nav">
-        <button class="active" id="nav-stats">施測數據統計</button>
-        <button id="nav-tire">前後胎壓未達標準(6M)</button>
-        <button id="nav-operability">各縣市場站可動率</button>
-        <button id="nav-maintenance">車輛事故與一級維護</button>
-        <button id="nav-simulation">本月模擬體驗數據</button>
+    <div class="top-nav zoom-target">
+        <button class="active" id="nav-stats">全國縣市平均數據：施測數據統計</button>
+        <button id="nav-tire">全國縣市平均數據：前後胎壓未達標準(6M)</button>
+        <button id="nav-operability">全國縣市平均數據：各縣市場站可動率</button>
+        <button id="nav-maintenance">全國縣市平均數據：車輛事故與一級維護</button>
+        <button id="nav-simulation">全國縣市平均數據：本月模擬體驗數據</button>
     </div>
 
-    <div class="controls" id="button-container"></div>
+    <div class="controls zoom-target" id="button-container"></div>
 
     <div class="dashboard" id="main-dashboard">
         <div class="panel map-panel" id="map-panel-container">
-            <div class="legend-box" id="legend-box-content"></div>
+            <div class="legend-box zoom-target" id="legend-box-content"></div>
             
-            <div class="floating-base-metrics" id="floating-stats-area">
+            <div class="floating-base-metrics zoom-target" id="floating-stats-area">
                 <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: var(--text-primary); text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">全國總計基礎施測數據 (2026/04)</div>
                 <div class="base-metrics-grid grid-cols-2">
                     <div class="metric-card"><div class="metric-title">施測站數</div><div class="metric-value">287 站</div></div>
@@ -49,7 +55,7 @@
                 </div>
             </div>
 
-            <div class="city-detail-panel" id="cityDetailPanel">
+            <div class="city-detail-panel zoom-target" id="cityDetailPanel">
                 <h4 id="detail-title">選擇縣市</h4>
                 <div id="detail-content"></div>
             </div>
@@ -59,7 +65,7 @@
 
         <div class="panel chart-panel" id="right-chart-panel" style="overflow-y: auto;">
             
-            <div class="base-metrics-wrapper hidden" id="maintenance-metrics-area">
+            <div class="base-metrics-wrapper hidden zoom-target" id="maintenance-metrics-area">
                 <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
                     全國營運車輛數對比
                     <span id="fleet-title-hint" onclick="toggleFleetDetails()" style="font-size: 12px; color: var(--accent-color); cursor: pointer; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.1);">(點擊展開各縣市明細)</span>
@@ -73,7 +79,7 @@
                 </div>
             </div>
 
-            <div class="base-metrics-wrapper hidden" id="simulation-metrics-area">
+            <div class="base-metrics-wrapper hidden zoom-target" id="simulation-metrics-area">
                 <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
                     全國異常車輛數總計 (含主管評測，排除胎壓異常)
                     <span id="sim-title-hint" onclick="toggleSimDetails()" style="font-size: 12px; color: var(--accent-color); cursor: pointer; padding: 2px 6px; border-radius: 4px; background: rgba(56, 189, 248, 0.1);">(點擊展開各縣市數量)</span>
@@ -88,7 +94,7 @@
 
             <div id="barChart" class="chart-container"></div>
 
-            <div id="maintenance-info-area" class="hidden" style="flex: 1; padding: 10px; animation: fadeIn 0.3s;">
+            <div id="maintenance-info-area" class="hidden zoom-target" style="flex: 1; padding: 10px; animation: fadeIn 0.3s;">
                 <h3 style="color: var(--text-primary); margin-top: 0; margin-bottom: 15px;">一級維修 檢測與行動方案說明</h3>
                 <div class="alert-banner">⚠️ 反應相同條件設定下，營運端撈取 EMS 及 MIS 數據庫撈取之「一級維護數量」不同。</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -139,6 +145,6 @@
     <div id="laser-dot" class="laser-dot"></div>
 
     <script src="js/data.js?v=1.6"></script>
-    <script src="js/app.js?v=1.5"></script>
+    <script src="js/app.js?v=1.6"></script>
 </body>
 </html>
