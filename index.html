@@ -25,14 +25,8 @@
                 <span class="slider-btn" onclick="adjustZoom(0.8)">A-</span>
             </div>
 
-            <select id="projectorSelect" class="projector-select">
-                <option value="default">預設顯示</option>
-                <option value="PA503W">WXGA PA503W (16:10)</option>
-                <option value="NEC">NEC P627UL (High-Res)</option>
-            </select>
-
             <button class="laser-toggle" id="laserToggleBtn" title="開啟雷射筆效果">🔴 雷射筆</button>
-            <button class="presentation-toggle" id="presentationToggleBtn" title="進入/退出全螢幕投影">📺 投影模式</button>
+            <button class="presentation-toggle" id="presentationToggleBtn" title="進入/退出全螢幕投影 (F11)">📺 投影模式</button>
             <button id="themeToggleBtn">🌞 淺色模式</button>
         </div>
     </div>
@@ -107,7 +101,7 @@
 
             <div id="maintenance-info-area" class="hidden zoom-target" style="flex: 1; padding: 10px; animation: fadeIn 0.3s;">
                 <h3 style="color: var(--text-primary); margin-top: 0; margin-bottom: 15px;">一級維修 檢測與行動方案說明</h3>
-                <div class="alert-banner">⚠️ 反應相同條件設定下，營運端撈取 EMS 及 MIS 數據庫撈取之「一級維護數量」不同。</div>
+                
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div class="info-card">
                         <h4>📌 異常排除定義</h4>
@@ -146,7 +140,7 @@
                         <tr><th style="width: 25%; text-align: center;">方案</th><th>執行內容</th></tr>
                         <tr><td style="text-align: center; font-weight: bold;">臨時方案</td><td>以抽樣篩選出日期，90%達成率</td></tr>
                         <tr><td style="text-align: center; font-weight: bold;">短中期</td><td>EMS使用標準，以EMS數據比對每台車每月須有一次維修紀錄</td></tr>
-                        <tr><td style="text-align: center; font-weight: bold; color: var(--accent-color);">長期</td><td>優化EMS系統，列管專案進度追蹤 <span class="highlight-text">(預計4月底測試，5月底上線)</span></td></tr>
+                        <tr><td style="text-align: center; font-weight: bold; color: var(--accent-color);">長期</td><td>優化EMS系統，列管專案進度追蹤 <span class="highlight-text">(預計5月底測試，6月中上線)</span></td></tr>
                     </table>
                 </div>
             </div>
@@ -156,6 +150,6 @@
     <div id="laser-dot" class="laser-dot"></div>
 
     <script src="js/data.js?v=1.6"></script>
-    <script src="js/app.js?v=1.8"></script>
+    <script src="js/app.js?v=1.9"></script>
 </body>
 </html>
