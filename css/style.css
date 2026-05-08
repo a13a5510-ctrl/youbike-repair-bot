@@ -1,267 +1,39 @@
-/* css/style.css */
-
-/* 深色模式變數 (預設) */
-:root {
-    --bg-color: #0b1120;
-    --panel-bg: rgba(30, 41, 59, 0.7);
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --accent-color: #38bdf8;
-    --danger-color: #f43f5e;
-    --warning-color: #f59e0b;
-    --safe-color: #10b981;
-    --border-color: #334155;
-    --chart-grid: #1e293b;
-    --map-base: #1e293b;
-}
-
-/* 淺色科技感模式變數 (Glassmorphism) */
-body.light-mode {
-    --bg-color: #e2e8f0;
-    --panel-bg: rgba(255, 255, 255, 0.6);
-    --text-primary: #0f172a; 
-    --text-secondary: #334155; 
-    --accent-color: #2563eb;
-    --danger-color: #e11d48;
-    --warning-color: #d97706;
-    --safe-color: #059669;
-    --border-color: rgba(148, 163, 184, 0.4); 
-    --chart-grid: #cbd5e1;
-    --map-base: #e2e8f0;
-}
-
-body {
-    margin: 0;
-    padding: 15px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: var(--bg-color);
+/* --- 投影機型號選單樣式 --- */
+.projector-select {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
     color: var(--text-primary);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    box-sizing: border-box;
-    overflow: hidden;
-    transition: background-color 0.4s ease, color 0.4s ease;
+    border-radius: 6px;
+    padding: 5px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    margin-right: 8px;
 }
 
-.header { text-align: center; margin-bottom: 10px; position: relative; }
-.header h1 { margin: 0 0 5px 0; font-size: 28px; letter-spacing: 3px; }
-
-/* 右上角工具列容器 */
-.header-tools {
-    position: absolute; right: 20px; top: 0; display: flex; gap: 10px;
+/* --- 🌟 沉浸式投影模式核心樣式 --- */
+body.full-projection-active {
+    overflow: hidden !important;
 }
 
-.theme-toggle, .presentation-toggle {
-    background: var(--panel-bg); border: 1px solid var(--border-color);
-    color: var(--text-primary); padding: 8px 15px; border-radius: 20px;
-    cursor: pointer; font-weight: bold; backdrop-filter: blur(10px);
-    transition: all 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    display: flex; align-items: center; gap: 5px;
-}
-.theme-toggle:hover, .presentation-toggle:hover { border-color: var(--accent-color); transform: translateY(-2px); }
-.presentation-toggle.active { background-color: var(--warning-color); color: #fff; border-color: var(--warning-color); }
-
-/* 頂層平行架構切換按鈕 */
-.top-nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-.top-nav button {
-    background-color: rgba(15, 23, 42, 0.5); color: var(--text-secondary);
-    border: 2px solid var(--border-color); padding: 8px 16px;
-    border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: bold;
-    transition: all 0.3s; backdrop-filter: blur(10px); letter-spacing: 1px;
-}
-body.light-mode .top-nav button { background-color: rgba(255, 255, 255, 0.5); color: var(--text-secondary); } 
-.top-nav button:hover { border-color: var(--accent-color); color: var(--text-primary); }
-
-/* 🌟 修復：深色模式選中狀態 */
-body:not(.light-mode) .top-nav button.active,
-body:not(.light-mode) .controls button.active {
-    background-color: var(--accent-color); color: #fff !important; 
-    border-color: var(--accent-color); box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+/* 開啟投影時，隱藏標題列 */
+body.full-projection-active .header {
+    display: none !important;
 }
 
-/* 🌟 修復：淺色模式選中狀態 (確保文字是暗色系，背景是明顯的冰川藍) */
-body.light-mode .top-nav button.active,
-body.light-mode .controls button.active {
-    background-color: #bfdbfe !important; /* 柔和冰川藍背景 */
-    color: #1e3a8a !important; /* 極深海軍藍文字，高對比度 */
-    border-color: #3b82f6 !important; 
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3) !important;
-}
-
-/* 子項目戰術按鈕 */
-.controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; min-height: 32px; }
-.controls button {
-    background-color: var(--panel-bg); color: var(--text-secondary);
-    border: 1px solid var(--border-color); padding: 6px 16px;
-    border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold;
-    transition: all 0.3s; backdrop-filter: blur(10px);
-}
-.controls button:hover { border-color: var(--accent-color); color: var(--text-primary); box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
-
-.dashboard { display: flex; flex: 1; gap: 20px; min-height: 0; transition: all 0.5s ease; }
-
-/* 投影模式強制排版 */
-body.presentation-mode .dashboard { max-width: 1600px; margin: 0 auto; width: 100%; }
-body.presentation-mode .map-panel { min-width: 600px !important; max-width: 800px !important; }
-
-.panel {
-    background-color: var(--panel-bg); backdrop-filter: blur(15px);
-    border-radius: 12px; border: 1px solid var(--border-color);
-    display: flex; flex-direction: column; position: relative;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); transition: background-color 0.4s, border-color 0.4s;
-}
-
-.map-panel { flex: 4.5; padding: 15px; transition: flex 0.5s ease; }
-.chart-panel { flex: 5.5; padding: 15px; display: flex; flex-direction: column; gap: 10px; transition: flex 0.5s ease, opacity 0.3s ease; }
-.chart-container { flex: 1; width: 100%; height: 100%; min-height: 300px; }
-
-/* 當套用此 class 時，地圖佔滿，圖表消失 */
-.full-width-map .map-panel { flex: 1; max-width: none !important; }
-.full-width-map .chart-panel { flex: 0; opacity: 0; overflow: hidden; padding: 0; margin: 0; border: none; display: none; }
-
-/* 基礎數據卡片區塊 */
-.base-metrics-wrapper { display: block; transition: opacity 0.3s; }
-.base-metrics-grid { display: grid; gap: 10px; }
-.grid-cols-5 { grid-template-columns: repeat(5, 1fr); }
-.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
-.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-
-.metric-card { background: rgba(128, 128, 128, 0.1); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; text-align: center; transition: all 0.3s; }
-.metric-card.alert { border-color: var(--danger-color); }
-.metric-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
-.metric-value { font-size: 18px; font-weight: bold; color: var(--accent-color); }
-.metric-card.alert .metric-value { color: var(--danger-color); }
-
-.cursor-pointer { cursor: pointer; }
-.hover-glow:hover { border-color: var(--accent-color); box-shadow: 0 0 10px rgba(56, 189, 248, 0.2); transform: translateY(-1px); }
-.hidden { display: none !important; }
-
-/* 浮動視窗 */
-.city-detail-panel {
-    position: absolute; bottom: 20px; right: 20px;
-    background: var(--panel-bg); backdrop-filter: blur(20px);
-    border: 1px solid var(--accent-color); border-radius: 8px;
-    padding: 15px; width: 230px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    display: none; z-index: 10; color: var(--text-primary);
-}
-.city-detail-panel h4 { margin: 0 0 10px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--accent-color); }
-.detail-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
-
-/* 圖例 */
-.legend-box {
-    position: absolute; top: 20px; left: 20px;
-    background: var(--panel-bg); backdrop-filter: blur(10px);
-    border: 1px solid var(--border-color); padding: 10px; border-radius: 8px;
-    font-size: 12px; z-index: 10; color: var(--text-primary);
-}
-.legend-item { display: flex; align-items: center; margin-bottom: 5px; }
-.color-box { width: 15px; height: 15px; margin-right: 8px; border-radius: 3px; }
-.loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--accent-color); font-size: 18px; font-weight: bold; }
-
-/* 一級維修面板 */
-.info-card { background: rgba(128, 128, 128, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-.info-card h4 { margin: 0 0 10px 0; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-.info-card ul { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; }
-.info-card li { margin-bottom: 5px; }
-.info-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
-.info-table th { background: rgba(56, 189, 248, 0.1); padding: 6px; border: 1px solid var(--border-color); color: var(--text-primary); }
-.info-table td { padding: 6px; border: 1px solid var(--border-color); color: var(--text-secondary); }
-.info-table .highlight { background: rgba(234, 179, 8, 0.2); font-weight: bold; color: var(--warning-color); }
-.alert-banner { background: rgba(244, 63, 94, 0.15); border-left: 4px solid var(--danger-color); padding: 10px 15px; margin-bottom: 15px; border-radius: 0 4px 4px 0; font-size: 14px; font-weight: bold; color: var(--danger-color); }
-.highlight-text { background: rgba(234, 179, 8, 0.2); padding: 2px 4px; border-radius: 4px; font-weight: bold; }
-
-/* 第一宇宙專屬的四格浮動面板 */
-.floating-base-metrics {
-    position: absolute; top: 20px; right: 20px; z-index: 10;
-    background: var(--panel-bg); backdrop-filter: blur(15px);
-    border: 1px solid var(--border-color); border-radius: 12px;
-    padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 300px;
-}
-
-/* --- 雷射筆專用特效 --- */
-.laser-dot {
+/* 投影時讓 Dashboard 填滿整個螢幕 */
+body.full-projection-active .dashboard {
+    height: 100vh !important;
+    width: 100vw !important;
+    padding: 0 !important;
+    margin: 0 !important;
     position: fixed;
     top: 0;
     left: 0;
-    width: 16px;
-    height: 16px;
-    background-color: #ff0000;
-    border-radius: 50%;
-    pointer-events: none; /* 讓滑鼠點擊可以穿透雷射點 */
-    z-index: 999999;
-    box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000;
-    opacity: 0;
-    display: none;
-    /* 取消 transition 確保鼠標跟隨零延遲 */
+    z-index: 9999;
 }
 
-.laser-dot.active {
-    display: block;
-    opacity: 1;
+/* 投影時背景色強制深色，增加對比 */
+body.full-projection-active {
+    background: #000 !important;
 }
-
-/* --- 面板左右比例平滑過渡 --- */
-#map-panel-container { transition: flex 0.2s ease-out; flex: 1; }
-#right-chart-panel { transition: flex 0.2s ease-out; flex: 1; }
-
-/* --- 雙拉環控制台樣式 --- */
-.slider-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--panel-bg);
-    border: 1px solid var(--border-color);
-    padding: 0 10px;
-    border-radius: 6px;
-    height: 33px; 
-    margin-right: 8px; 
-}
-
-.slider-container input[type="range"] {
-    width: 60px;
-    cursor: pointer;
-    accent-color: var(--accent-color); 
-}
-
-.slider-icon { font-size: 14px; }
-.slider-btn { 
-    font-size: 14px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    color: var(--text-primary); 
-    transition: 0.2s; 
-}
-.slider-btn:hover { color: var(--accent-color); text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
-
-/* --- 覆蓋右上角工具按鈕樣式 (全區方格化) --- */
-.header-tools button {
-    border-radius: 6px !important;
-    background: var(--panel-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 6px 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-/* --- 投影模式 & 雷射筆：開啟時同步為「警示橘」 --- */
-button.presentation-toggle.active,
-button.laser-toggle.active {
-    background-color: var(--warning-color) !important; 
-    border-color: var(--warning-color) !important;
-    color: #ffffff !important;
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); 
-    font-weight: bold;
-}
-.header-tools button:hover { background: rgba(56, 189, 248, 0.15); border-color: var(--accent-color); }
-
-/* 雷射點 */
-.laser-dot {
-    position: fixed; top: 0; left: 0; width: 16px; height: 16px;
-    background-color: #ff0000; border-radius: 50%; pointer-events: none; z-index: 999999;
-    box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000;
-    opacity: 0; display: none;
-}
-.laser-dot.active { display: block; opacity: 1; }
-body.laser-active, body.laser-active * { cursor: none !important; }
