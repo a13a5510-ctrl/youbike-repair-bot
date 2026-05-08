@@ -4,7 +4,7 @@ let twGeoJson = null;
 let currentMode = 'stats'; 
 let showingFleetDetails = false;
 let showingSimDetails = false;
-let isDataView = false; // 🌟 數據清單模式狀態
+let isDataView = false; 
 
 let currentStatsMetric = 'station';
 let currentMaintenanceMetric = 'maintenance_rate';
@@ -34,6 +34,7 @@ function renderSubButtons() {
                 
                 setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
                 updateBarChart(); 
+                if (isDataView) renderDataView(); // 🌟 連動更新報表高光
             });
             btnContainer.appendChild(btn);
         });
@@ -55,6 +56,7 @@ function renderSubButtons() {
                     document.getElementById('maintenance-info-area').classList.add('hidden');
                     updateBarChart(); 
                 }
+                if (isDataView) renderDataView(); // 🌟 連動更新報表高光
             });
             btnContainer.appendChild(btn);
         });
@@ -70,6 +72,7 @@ function renderSubButtons() {
                 updateMapTheme();
                 updateLegendBox();
                 updateBarChart(); 
+                if (isDataView) renderDataView(); // 🌟 連動更新報表高光
             });
             btnContainer.appendChild(btn);
         });
@@ -104,7 +107,7 @@ function switchMode(mode, targetElement) {
     if (mode === 'stats') {
         controlsArea.classList.remove('hidden');
         dashboard.classList.add('full-width-map');
-        floatingStats.classList.remove('hidden');
+        // 浮動面板會由 toggleDataView 判斷是否顯示
         currentStatsMetric = ''; 
     } else {
         dashboard.classList.remove('full-width-map'); 
@@ -129,7 +132,6 @@ function switchMode(mode, targetElement) {
     updateLegendBox();
     updateMapTheme(); 
     
-    // 🌟 處理切換狀態
     toggleDataView();
     
     setTimeout(() => {
@@ -141,7 +143,7 @@ function switchMode(mode, targetElement) {
     }, 350);
 }
 
-// --- 🌟 資料報表切換邏輯 ---
+// --- 🌟 資料報表切換邏輯 (解除 stats 限制) ---
 document.getElementById('mapDataToggleBtn').addEventListener('click', (e) => {
     isDataView = !isDataView;
     toggleDataView();
@@ -152,15 +154,7 @@ function toggleDataView() {
     const toggleBtn = document.getElementById('mapDataToggleBtn');
     const legendBox = document.getElementById('legend-box-content');
     const detailPanel = document.getElementById('cityDetailPanel');
-
-    // 如果是首頁 (stats)，強制顯示地圖，隱藏切換鈕
-    if (currentMode === 'stats') {
-        isDataView = false;
-        toggleBtn.classList.add('hidden');
-        dataContainer.classList.add('hidden');
-        legendBox.classList.remove('hidden');
-        return;
-    }
+    const floatingStats = document.getElementById('floating-stats-area');
 
     toggleBtn.classList.remove('hidden');
     toggleBtn.innerText = isDataView ? '🗺️ 切換地圖顯示' : '📋 切換數據報表';
@@ -169,20 +163,35 @@ function toggleDataView() {
         dataContainer.classList.remove('hidden');
         legendBox.classList.add('hidden');
         detailPanel.style.display = 'none';
+        if(currentMode === 'stats') floatingStats.classList.add('hidden');
         renderDataView();
     } else {
         dataContainer.classList.add('hidden');
         legendBox.classList.remove('hidden');
+        if(currentMode === 'stats') floatingStats.classList.remove('hidden');
     }
 }
 
+// 🌟 重新設計的資料渲染引擎：加入列高光
 function renderDataView() {
     const container = document.getElementById('data-view-container');
     let title = document.querySelector('.top-nav button.active').innerText;
     let html = `<h3 style="margin-top:0; color:var(--accent-color); border-bottom:1px solid var(--border-color); padding-bottom:10px;">${title} - 各縣市明細報表</h3>`;
     html += '<table class="clean-data-table"><thead><tr>';
 
-    if (currentMode === 'tire') {
+    if (currentMode === 'stats') {
+        let cl = (key) => currentStatsMetric === key ? 'class="active-col"' : '';
+        html += `<th>縣市</th><th>綜合分數</th><th ${cl('station')}>場站妥善度</th><th ${cl('appearance')}>外觀標示</th><th ${cl('functionality')}>重要機能</th><th ${cl('ems')}>EMS維護率</th><th ${cl('operability')}>可動率</th></tr></thead><tbody>`;
+        rawData.forEach(r => {
+            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+                <td style="color:var(--accent-color);font-weight:bold;">${r.overall} 分</td>
+                <td ${cl('station')}>${r.station} 分</td>
+                <td ${cl('appearance')}>${r.appearance} 分</td>
+                <td ${cl('functionality')}>${r.functionality} 分</td>
+                <td ${cl('ems')}>${r.ems}%</td>
+                <td ${cl('operability')}>${r.operability}%</td></tr>`;
+        });
+    } else if (currentMode === 'tire') {
         html += '<th>縣市</th><th>25年11月</th><th>25年12月</th><th>26年01月</th><th>26年02月</th><th>26年03月</th><th>26年04月 (當月)</th></tr></thead><tbody>';
         rawData.forEach(r => {
             let v4m = r.tire_history[6];
@@ -204,26 +213,32 @@ function renderDataView() {
                 <td style="color:${varColor};font-weight:bold;">${varianceSign}${variance}%</td></tr>`;
         });
     } else if (currentMode === 'maintenance') {
-        html += '<th>縣市</th><th>總營運車輛</th><th>事故車輛數</th><th>維護記錄數</th><th>一級維護率</th><th>較上月變動</th></tr></thead><tbody>';
+        let clAcc = currentMaintenanceMetric === 'm_accident' ? 'class="active-col"' : '';
+        let clRec = currentMaintenanceMetric === 'm_records' ? 'class="active-col"' : '';
+        let clRate = currentMaintenanceMetric === 'maintenance_rate' ? 'class="active-col"' : '';
+        html += `<th>縣市</th><th>總營運車輛</th><th ${clAcc}>事故車輛數</th><th ${clRec}>維護記錄數</th><th ${clRate}>一級維護率</th><th>較上月變動</th></tr></thead><tbody>`;
         rawData.forEach(r => {
             let varColor = r.m_var.includes('-') ? 'var(--danger-color)' : 'var(--safe-color)';
             html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
                 <td>${r.m_fleet.toLocaleString()}</td>
-                <td style="color:var(--danger-color);font-weight:bold;">${r.m_accident}</td>
-                <td>${r.m_records.toLocaleString()}</td>
-                <td style="color:var(--accent-color);font-weight:bold;">${r.maintenance_rate}%</td>
+                <td ${clAcc} style="color:var(--danger-color);font-weight:bold;">${r.m_accident}</td>
+                <td ${clRec}>${r.m_records.toLocaleString()}</td>
+                <td ${clRate} style="color:var(--accent-color);font-weight:bold;">${r.maintenance_rate}%</td>
                 <td style="color:${varColor};font-weight:bold;">${r.m_var}</td></tr>`;
         });
     } else if (currentMode === 'simulation') {
-        html += '<th>縣市</th><th>A級異常</th><th>B級異常</th><th>C級異常</th></tr></thead><tbody>';
+        let clA = currentSimulationMetric === 'sim_a' ? 'class="active-col"' : '';
+        let clB = currentSimulationMetric === 'sim_b' ? 'class="active-col"' : '';
+        let clC = currentSimulationMetric === 'sim_c' ? 'class="active-col"' : '';
+        html += `<th>縣市</th><th ${clA}>A級異常</th><th ${clB}>B級異常</th><th ${clC}>C級異常</th></tr></thead><tbody>`;
         rawData.forEach(r => {
             let aColor = r.sim_a_ratio > 5.0 ? 'var(--danger-color)' : 'var(--text-primary)';
             let bColor = r.sim_b_ratio > 20.0 ? 'var(--danger-color)' : 'var(--text-primary)';
             let cColor = r.sim_c_ratio > 50.0 ? 'var(--danger-color)' : 'var(--text-primary)';
             html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
-                <td style="color:${aColor};font-weight:bold;">${r.sim_a_count} 輛 (${r.sim_a_ratio}%)</td>
-                <td style="color:${bColor};font-weight:bold;">${r.sim_b_count} 輛 (${r.sim_b_ratio}%)</td>
-                <td style="color:${cColor};font-weight:bold;">${r.sim_c_count} 輛 (${r.sim_c_ratio}%)</td></tr>`;
+                <td ${clA} style="color:${aColor};font-weight:bold;">${r.sim_a_count} 輛 (${r.sim_a_ratio}%)</td>
+                <td ${clB} style="color:${bColor};font-weight:bold;">${r.sim_b_count} 輛 (${r.sim_b_ratio}%)</td>
+                <td ${clC} style="color:${cColor};font-weight:bold;">${r.sim_c_count} 輛 (${r.sim_c_ratio}%)</td></tr>`;
         });
     }
     html += '</tbody></table>';
@@ -314,15 +329,15 @@ document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     if(currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info') updateBarChart(); 
 });
 
+// --- 🌟 更新：自動全螢幕 F11 投影與最大化字體 ---
 let isPresentationMode = false;
-const projectorSelect = document.getElementById('projectorSelect');
 const presentationBtn = document.getElementById('presentationToggleBtn');
 
 presentationBtn.addEventListener('click', async () => {
     isPresentationMode = !isPresentationMode;
-    const dashboard = document.getElementById('main-dashboard');
     
     if (isPresentationMode) {
+        // 請求進入 F11 原生全螢幕
         if (document.documentElement.requestFullscreen) {
             await document.documentElement.requestFullscreen().catch(() => {});
         }
@@ -330,30 +345,25 @@ presentationBtn.addEventListener('click', async () => {
         presentationBtn.classList.add('active');
         presentationBtn.innerText = '🖥️ 退出投影';
         
-        const model = projectorSelect.value;
-        let pZoom = 1.0;
-        if (model === 'PA503W') {
-            pZoom = 1.15; 
-            mapChart.setOption({ geo: { center: [120.5, 23.8], zoom: 1.3 } });
-        } else if (model === 'NEC') {
-            pZoom = 1.25; 
-            mapChart.setOption({ geo: { center: [120.5, 23.8], zoom: 1.5 } });
-        }
-        dashboard.style.zoom = pZoom;
+        // 🌟 自動將拉環推到最左邊 (最大字體 1.5)
+        adjustZoom(1.5);
     } else {
+        // 退出全螢幕
         if (document.exitFullscreen && document.fullscreenElement) {
             document.exitFullscreen();
         }
         document.body.classList.remove('full-projection-active');
         presentationBtn.classList.remove('active');
         presentationBtn.innerText = '📺 投影模式';
-        dashboard.style.zoom = 1;
-        mapChart.setOption({ geo: { center: null, zoom: 1 } });
+        
+        // 🌟 退出時縮回正常比例
+        adjustZoom(1);
     }
     
     setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150);
 });
 
+// 確保按鍵 ESC 退出時狀態同步
 document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement && isPresentationMode) {
         presentationBtn.click(); 
