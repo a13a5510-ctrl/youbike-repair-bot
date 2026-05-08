@@ -250,6 +250,26 @@ function getMapValue(item) {
     else if (currentMode === 'simulation') return item[currentSimulationMetric + '_ratio']; 
 }
 
+// 7. 會議投影專用：字體與畫面動態縮放引擎
+const fontSizeSlider = document.getElementById('fontSizeSlider');
+if(fontSizeSlider) {
+    fontSizeSlider.addEventListener('input', (e) => {
+        const scale = e.target.value;
+        
+        // 使用 CSS zoom 強制縮放「下半部資料區」，避開 Header 避免工具列亂跑
+        document.querySelector('.top-nav').style.zoom = scale;
+        document.getElementById('main-dashboard').style.zoom = scale;
+        
+        // 為了避免 ECharts 畫布在縮放後破圖，延遲一點點強制圖表重繪
+        setTimeout(() => { 
+            mapChart.resize(); 
+            if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
+                barChart.resize(); 
+            }
+        }, 80);
+    });
+}
+
 function getVisualMapOption() {
     const style = getComputedStyle(document.body);
     const danger = style.getPropertyValue('--danger-color').trim();
@@ -532,3 +552,5 @@ async function initDashboard() {
 initDashboard();
 
 window.addEventListener('resize', () => { mapChart.resize(); barChart.resize(); });
+
+
