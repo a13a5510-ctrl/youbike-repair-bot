@@ -1,5 +1,6 @@
 // js/app.js
-let isLightMode = false;
+// 🌟 預設為淺色模式
+let isLightMode = true; 
 let twGeoJson = null;
 let currentMode = 'stats'; 
 let showingFleetDetails = false;
@@ -32,9 +33,12 @@ function renderSubButtons() {
                 document.getElementById('main-dashboard').classList.remove('full-width-map');
                 document.getElementById('floating-stats-area').classList.add('hidden');
                 
+                // 🌟 切換子按鈕時，重新判斷切換按鈕是否該顯示
+                toggleDataView();
+                if (isDataView) renderDataView(); 
+                
                 setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
                 updateBarChart(); 
-                if (isDataView) renderDataView(); // 🌟 連動更新報表高光
             });
             btnContainer.appendChild(btn);
         });
@@ -56,7 +60,7 @@ function renderSubButtons() {
                     document.getElementById('maintenance-info-area').classList.add('hidden');
                     updateBarChart(); 
                 }
-                if (isDataView) renderDataView(); // 🌟 連動更新報表高光
+                if (isDataView) renderDataView(); 
             });
             btnContainer.appendChild(btn);
         });
@@ -72,7 +76,7 @@ function renderSubButtons() {
                 updateMapTheme();
                 updateLegendBox();
                 updateBarChart(); 
-                if (isDataView) renderDataView(); // 🌟 連動更新報表高光
+                if (isDataView) renderDataView(); 
             });
             btnContainer.appendChild(btn);
         });
@@ -107,7 +111,6 @@ function switchMode(mode, targetElement) {
     if (mode === 'stats') {
         controlsArea.classList.remove('hidden');
         dashboard.classList.add('full-width-map');
-        // 浮動面板會由 toggleDataView 判斷是否顯示
         currentStatsMetric = ''; 
     } else {
         dashboard.classList.remove('full-width-map'); 
@@ -143,18 +146,27 @@ function switchMode(mode, targetElement) {
     }, 350);
 }
 
-// --- 🌟 資料報表切換邏輯 (解除 stats 限制) ---
 document.getElementById('mapDataToggleBtn').addEventListener('click', (e) => {
     isDataView = !isDataView;
     toggleDataView();
 });
 
+// 🌟 修復隱藏按鈕邏輯：只有在 stats 且「尚未點擊任何子按鈕」時隱藏
 function toggleDataView() {
     const dataContainer = document.getElementById('data-view-container');
     const toggleBtn = document.getElementById('mapDataToggleBtn');
     const legendBox = document.getElementById('legend-box-content');
     const detailPanel = document.getElementById('cityDetailPanel');
     const floatingStats = document.getElementById('floating-stats-area');
+
+    if (currentMode === 'stats' && currentStatsMetric === '') {
+        isDataView = false;
+        toggleBtn.classList.add('hidden');
+        dataContainer.classList.add('hidden');
+        legendBox.classList.remove('hidden');
+        floatingStats.classList.remove('hidden');
+        return;
+    }
 
     toggleBtn.classList.remove('hidden');
     toggleBtn.innerText = isDataView ? '🗺️ 切換地圖顯示' : '📋 切換數據報表';
@@ -168,11 +180,32 @@ function toggleDataView() {
     } else {
         dataContainer.classList.add('hidden');
         legendBox.classList.remove('hidden');
-        if(currentMode === 'stats') floatingStats.classList.remove('hidden');
+        if(currentMode === 'stats' && currentStatsMetric === '') floatingStats.classList.remove('hidden');
     }
 }
 
-// 🌟 重新設計的資料渲染引擎：加入列高光
+// 🌟 雙向互動引擎：點擊表格或折線時互相高亮
+window.highlightTireData = function(region) {
+    if (currentMode !== 'tire') return;
+    
+    if (isDataView) {
+        document.querySelectorAll('.clean-data-table tbody tr').forEach(tr => tr.classList.remove('row-highlight'));
+        const targetRow = document.getElementById(`row-${region}`);
+        if (targetRow) {
+            targetRow.classList.add('row-highlight');
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    barChart.dispatchAction({ type: 'downplay' });
+    barChart.dispatchAction({ type: 'highlight', seriesName: region });
+    barChart.dispatchAction({
+        type: 'showTip',
+        seriesIndex: barChart.getOption().series.findIndex(s => s.name === region),
+        dataIndex: 5
+    });
+};
+
 function renderDataView() {
     const container = document.getElementById('data-view-container');
     let title = document.querySelector('.top-nav button.active').innerText;
@@ -195,8 +228,10 @@ function renderDataView() {
         html += '<th>縣市</th><th>25年11月</th><th>25年12月</th><th>26年01月</th><th>26年02月</th><th>26年03月</th><th>26年04月 (當月)</th></tr></thead><tbody>';
         rawData.forEach(r => {
             let v4m = r.tire_history[6];
-            let v4mColor = v4m > 4.0 ? 'var(--danger-color)' : 'var(--safe-color)';
-            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+            let v4mColor = v4m > 4.5 ? 'var(--danger-color)' : (v4m > 4.0 ? 'var(--warning-color)' : 'var(--safe-color)');
+            // 🌟 加入 onclick 事件與 ID
+            html += `<tr id="row-${r.region}" onclick="highlightTireData('${r.region}')" style="cursor:pointer; transition: all 0.3s;">
+                <td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
                 <td>${r.tire_history[1]}%</td><td>${r.tire_history[2]}%</td><td>${r.tire_history[3]}%</td>
                 <td>${r.tire_history[4]}%</td><td>${r.tire_history[5]}%</td>
                 <td style="color:${v4mColor};font-weight:bold;">${v4m}% (${r.tire_count}輛)</td></tr>`;
@@ -329,7 +364,7 @@ document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     if(currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info') updateBarChart(); 
 });
 
-// --- 🌟 更新：自動全螢幕 F11 投影與最大化字體 ---
+// 🌟 純淨原生 F11 全螢幕投影 (不遮擋按鈕)
 let isPresentationMode = false;
 const presentationBtn = document.getElementById('presentationToggleBtn');
 
@@ -337,33 +372,28 @@ presentationBtn.addEventListener('click', async () => {
     isPresentationMode = !isPresentationMode;
     
     if (isPresentationMode) {
-        // 請求進入 F11 原生全螢幕
         if (document.documentElement.requestFullscreen) {
             await document.documentElement.requestFullscreen().catch(() => {});
         }
-        document.body.classList.add('full-projection-active');
         presentationBtn.classList.add('active');
         presentationBtn.innerText = '🖥️ 退出投影';
         
-        // 🌟 自動將拉環推到最左邊 (最大字體 1.5)
-        adjustZoom(1.5);
+        // 自動放大字體至 2.0 倍
+        adjustZoom(2.0);
     } else {
-        // 退出全螢幕
         if (document.exitFullscreen && document.fullscreenElement) {
             document.exitFullscreen();
         }
-        document.body.classList.remove('full-projection-active');
         presentationBtn.classList.remove('active');
         presentationBtn.innerText = '📺 投影模式';
         
-        // 🌟 退出時縮回正常比例
+        // 縮回原本字體
         adjustZoom(1);
     }
     
     setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150);
 });
 
-// 確保按鍵 ESC 退出時狀態同步
 document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement && isPresentationMode) {
         presentationBtn.click(); 
@@ -476,21 +506,30 @@ function updateBarChart() {
         const sortedData = [...rawData].sort((a, b) => b.tire_history[6] - a.tire_history[6]); 
         const regions = sortedData.map(item => item.region);
         const months = ['25/11', '25/12', '26/01', '26/02', '26/03', '26/04'];
+        
+        // 🌟 防撞擊多彩色盤 (供大於4.5分的線條使用)
+        const dangerColors = ['#e11d48', '#d946ef', '#8b5cf6', '#f59e0b', '#c026d3', '#ea580c'];
+        let colorIdx = 0;
         const seriesData = [];
 
         sortedData.forEach((item, index) => {
-            let isTop = index < 3; 
+            let val = item.tire_history[6];
+            let isBad = val > 4.5; 
+            let lineColor = isBad ? dangerColors[colorIdx++ % dangerColors.length] : (isLightMode ? '#cbd5e1' : '#475569');
+
             seriesData.push({
-                name: item.region, type: 'line', data: item.tire_history.slice(1), smooth: true, symbol: isTop ? 'circle' : 'none', symbolSize: 8,
-                lineStyle: { width: isTop ? 4 : 2, opacity: isTop ? 1 : 0.15 },
-                itemStyle: { color: isTop ? dangerColor : (isLightMode ? '#64748b' : '#94a3b8') },
+                name: item.region, type: 'line', data: item.tire_history.slice(1), smooth: true, symbol: isBad ? 'circle' : 'none', symbolSize: 8,
+                lineStyle: { width: isBad ? 4 : 2, opacity: isBad ? 1 : 0.3 },
+                itemStyle: { color: lineColor },
                 label: { show: false }, 
                 endLabel: { 
                     show: true, formatter: '{a} {c}%', color: 'inherit',
-                    fontSize: (isTop ? 14 : 11) * globalFontScale,
-                    fontWeight: isTop ? 'bold' : 'normal'
+                    fontSize: (isBad ? 14 : 11) * globalFontScale,
+                    fontWeight: isBad ? 'bold' : 'normal'
                 },
-                zlevel: isTop ? 10 : 1
+                // 🌟 智慧防重疊引擎
+                labelLayout: { moveOverlap: 'shiftY' },
+                zlevel: isBad ? 10 : 1
             });
         });
 
@@ -585,6 +624,16 @@ function updateBarChart() {
         ]
     }, true);
 }
+
+// 🌟 折線圖點擊追蹤
+barChart.on('click', function(params) {
+    if (currentMode === 'tire' && params.seriesType === 'line') {
+        if (!isDataView) {
+            document.getElementById('mapDataToggleBtn').click();
+        }
+        setTimeout(() => window.highlightTireData(params.seriesName), 150);
+    }
+});
 
 function setupMapClickEvent() {
     mapChart.on('click', function(params) {
