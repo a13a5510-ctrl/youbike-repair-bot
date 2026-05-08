@@ -227,3 +227,27 @@ button.laser-toggle.active {
     background: rgba(56, 189, 248, 0.15);
     border-color: var(--accent-color);
 }
+
+/* --- 字體/畫面縮放拉環樣式 --- */
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    padding: 0 12px;
+    border-radius: 6px;
+    height: 33px; /* 對齊工具列按鈕高度 */
+    margin-right: 15px; /* 與其他按鈕保持距離 */
+}
+
+#fontSizeSlider {
+    width: 80px;
+    cursor: pointer;
+    accent-color: var(--accent-color); /* 統一系統色系 */
+}
+
+.slider-container span:hover {
+    color: var(--accent-color) !important;
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
