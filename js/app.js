@@ -9,6 +9,9 @@ let currentStatsMetric = 'station';
 let currentMaintenanceMetric = 'maintenance_rate';
 let currentSimulationMetric = 'sim_a';
 
+// 🌟 全局字體縮放倍率，專門用來計算 ECharts 內部的字體，防止點擊錯位
+let globalFontScale = 1;
+
 const mapChart = echarts.init(document.getElementById('mapChart'));
 const barChart = echarts.init(document.getElementById('barChart'));
 
@@ -137,7 +140,6 @@ function switchMode(mode, targetElement) {
     }, 350);
 }
 
-// 3. 動態生成總數量明細
 function renderFleetDetails() {
     const container = document.getElementById('fleet-detail-grid');
     const simContainer = document.getElementById('sim-detail-grid');
@@ -164,7 +166,6 @@ function toggleSimDetails() {
     document.getElementById('sim-title-hint').innerText = showingSimDetails ? '(點擊收合回總計)' : '(點擊展開各縣市數量)';
 }
 
-// 4. 圖例文字更新
 function updateLegendBox() {
     const legendBox = document.getElementById('legend-box-content');
     if (currentMode === 'stats') {
@@ -190,7 +191,7 @@ function updateLegendBox() {
     }
 }
 
-// 5. 工具列：日夜切換、投影模式與 雷射筆
+// 5. 工具列：日夜切換、投影、雷射與雙拉環控制
 document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     isLightMode = !isLightMode;
     document.body.classList.toggle('light-mode', isLightMode);
@@ -213,7 +214,6 @@ document.getElementById('presentationToggleBtn').addEventListener('click', (e) =
         e.target.innerText = '📺 投影模式';
         mapChart.setOption({ geo: { center: null, zoom: 1 } });
     }
-    
     setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
 });
 
@@ -235,39 +235,47 @@ document.getElementById('laserToggleBtn').addEventListener('click', (e) => {
 });
 
 document.addEventListener('mousemove', (e) => {
-    if (isLaserMode) {
-        laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`;
+    if (isLaserMode) laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`;
+});
+
+// 🌟 佈局拉環控制 (左地圖，右圖表)
+document.getElementById('layoutSlider').addEventListener('input', (e) => {
+    const mapPct = e.target.value;
+    const chartPct = 100 - mapPct;
+    document.getElementById('map-panel-container').style.flex = `0 0 ${mapPct}%`;
+    document.getElementById('right-chart-panel').style.flex = `0 0 ${chartPct}%`;
+    mapChart.resize();
+    if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
+        barChart.resize(); 
     }
+});
+
+// 🌟 字體縮放拉環 (避開 Canvas 以防點擊失效)
+window.adjustZoom = function(val) {
+    document.getElementById('fontSizeSlider').value = val;
+    document.getElementById('fontSizeSlider').dispatchEvent(new Event('input'));
+};
+document.getElementById('fontSizeSlider').addEventListener('input', (e) => {
+    globalFontScale = parseFloat(e.target.value);
+    
+    // 只對純文字 DOM 進行 zoom，絕對不縮放 Canvas 容器
+    document.querySelectorAll('.zoom-target').forEach(el => {
+        el.style.zoom = globalFontScale;
+    });
+
+    // 動態重繪 ECharts 並帶入字體放大率
+    updateMapTheme();
+    updateBarChart();
 });
 
 
 // 6. ECharts 繪圖核心
 function getMapValue(item) {
     if (currentMode === 'stats') return item.overall;
-    else if (currentMode === 'tire') return item.tire_history[6]; // 百分比決定地圖顏色
+    else if (currentMode === 'tire') return item.tire_history[6]; 
     else if (currentMode === 'operability') return item.operability;
     else if (currentMode === 'maintenance') return item.maintenance_rate; 
     else if (currentMode === 'simulation') return item[currentSimulationMetric + '_ratio']; 
-}
-
-// 7. 會議投影專用：字體與畫面動態縮放引擎
-const fontSizeSlider = document.getElementById('fontSizeSlider');
-if(fontSizeSlider) {
-    fontSizeSlider.addEventListener('input', (e) => {
-        const scale = e.target.value;
-        
-        // 使用 CSS zoom 強制縮放「下半部資料區」，避開 Header 避免工具列亂跑
-        document.querySelector('.top-nav').style.zoom = scale;
-        document.getElementById('main-dashboard').style.zoom = scale;
-        
-        // 為了避免 ECharts 畫布在縮放後破圖，延遲一點點強制圖表重繪
-        setTimeout(() => { 
-            mapChart.resize(); 
-            if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
-                barChart.resize(); 
-            }
-        }, 80);
-    });
 }
 
 function getVisualMapOption() {
@@ -286,41 +294,7 @@ function getVisualMapOption() {
 }
 
 function renderInitialMap() {
-    let mapData = [], lineData = [], scatterData = [];
-    rawData.forEach(item => {
-        let val = getMapValue(item);
-        item.mapNames.forEach(name => mapData.push({ name: name, value: val, customRegion: item.region }));
-        lineData.push({ coords: [item.mapCenter, item.labelPos], value: val });
-        // 多帶入一個 item.tire_count 給 label 使用
-        scatterData.push({ name: item.region, value: [item.labelPos[0], item.labelPos[1], val, item.tire_count] });
-    });
-
-    mapChart.setOption({
-        geo: { map: 'Taiwan', roam: true, scaleLimit: { min: 0.8, max: 5 }, itemStyle: { areaColor: '#1e293b', borderColor: '#334155', borderWidth: 1 }, emphasis: { itemStyle: { areaColor: '#38bdf8' }, label: { show: false } } },
-        visualMap: getVisualMapOption(),
-        series: [
-            { type: 'map', geoIndex: 0, data: mapData },
-            { type: 'lines', coordinateSystem: 'geo', zlevel: 2, lineStyle: { color: '#94a3b8', width: 1.5, opacity: 0.6, curveness: 0.2 }, data: lineData },
-            {
-                type: 'scatter', coordinateSystem: 'geo', zlevel: 3, symbol: 'circle', symbolSize: 6, itemStyle: { color: '#38bdf8' },
-                label: {
-                    show: true, position: 'right', distance: 10,
-                    formatter: function(params) { 
-                        // 🌟 若在胎壓宇宙，改拿 value[3] 的 "輛數" 顯示
-                        if (currentMode === 'tire') {
-                            return `{region|${params.name}}\n{score|${params.value[3]} 輛}`;
-                        }
-                        let unit = (currentMode === 'stats' || currentMode === 'maintenance') ? '分' : '%';
-                        if(currentMode === 'maintenance') unit = '%'; 
-                        if(currentMode === 'stats') unit = '分';
-                        return `{region|${params.name}}\n{score|${params.value[2]} ${unit}}`; 
-                    },
-                    backgroundColor: 'rgba(15, 23, 42, 0.8)', padding: [6, 8], borderRadius: 4, borderColor: '#334155', borderWidth: 1,
-                    rich: { region: { color: '#f8fafc', fontSize: 13, fontWeight: 'bold', align: 'center', padding: [0, 0, 4, 0] }, score: { color: '#38bdf8', fontSize: 14, fontWeight: 'bold', align: 'center' } }
-                }, data: scatterData
-            }
-        ]
-    });
+    updateMapTheme(); // 直接依賴 updateMapTheme 的邏輯
 }
 
 function updateMapTheme() {
@@ -339,22 +313,31 @@ function updateMapTheme() {
     });
 
     mapChart.setOption({
-        geo: { itemStyle: { areaColor: mapBaseColor, borderColor: isLightMode ? '#ffffff' : '#334155' }, emphasis: { itemStyle: { areaColor: accentColor } } },
+        geo: { map: 'Taiwan', roam: true, scaleLimit: { min: 0.8, max: 5 }, itemStyle: { areaColor: mapBaseColor, borderColor: isLightMode ? '#ffffff' : '#334155', borderWidth: 1 }, emphasis: { itemStyle: { areaColor: accentColor }, label: { show: false } } },
         visualMap: getVisualMapOption(),
         series: [
-            { data: mapData }, 
-            { data: lineData, lineStyle: { color: isLightMode ? '#64748b' : '#94a3b8' } }, 
-            { data: scatterData, itemStyle: { color: accentColor }, label: {
-                formatter: function(params) { 
-                    if (currentMode === 'tire') {
-                        return `{region|${params.name}}\n{score|${params.value[3]} 輛}`;
+            { type: 'map', geoIndex: 0, data: mapData }, 
+            { type: 'lines', coordinateSystem: 'geo', zlevel: 2, lineStyle: { color: isLightMode ? '#64748b' : '#94a3b8', width: 1.5, opacity: 0.6, curveness: 0.2 }, data: lineData }, 
+            { 
+                type: 'scatter', coordinateSystem: 'geo', zlevel: 3, 
+                symbolSize: 0, // 🌟 神乎其技：把圓點隱藏，只留文字盒
+                data: scatterData, itemStyle: { color: accentColor }, 
+                label: {
+                    show: true, 
+                    position: 'center', // 🌟 將文字盒的「正中心」精準釘死線上尾端的座標！
+                    formatter: function(params) { 
+                        if (currentMode === 'tire') return `{region|${params.name}}\n{score|${params.value[3]} 輛}`;
+                        let unit = '%'; if(currentMode === 'stats') unit = '分';
+                        return `{region|${params.name}}\n{score|${params.value[2]} ${unit}}`; 
+                    },
+                    backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#cbd5e1' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4,
+                    rich: { 
+                        // 🌟 套入 globalFontScale，讓 ECharts 內部文字與外部拉環同步放大！
+                        region: { color: textColor, fontSize: 13 * globalFontScale, fontWeight: 'bold', align: 'center', padding: [0, 0, 4, 0] }, 
+                        score: { color: accentColor, fontSize: 14 * globalFontScale, fontWeight: 'bold', align: 'center' } 
                     }
-                    let unit = '%'; if(currentMode === 'stats') unit = '分';
-                    return `{region|${params.name}}\n{score|${params.value[2]} ${unit}}`; 
-                },
-                backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.9)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#cbd5e1' : '#334155',
-                rich: { region: { color: textColor }, score: { color: accentColor } }
-            } }
+                } 
+            }
         ]
     }, false); 
 }
@@ -378,30 +361,26 @@ function updateBarChart() {
         sortedData.forEach((item, index) => {
             let isTop = index < 3; 
             seriesData.push({
-                name: item.region,
-                type: 'line',
-                data: item.tire_history.slice(1),
-                smooth: true,
-                symbol: isTop ? 'circle' : 'none',
-                symbolSize: 8,
+                name: item.region, type: 'line', data: item.tire_history.slice(1), smooth: true, symbol: isTop ? 'circle' : 'none', symbolSize: 8,
                 lineStyle: { width: isTop ? 4 : 2, opacity: isTop ? 1 : 0.15 },
                 itemStyle: { color: isTop ? dangerColor : (isLightMode ? '#64748b' : '#94a3b8') },
                 label: { show: false }, 
                 endLabel: { 
                     show: true, formatter: '{a} {c}%', color: 'inherit',
-                    fontSize: isTop ? 14 : 11, fontWeight: isTop ? 'bold' : 'normal'
+                    fontSize: (isTop ? 14 : 11) * globalFontScale, // 🌟 同步放大
+                    fontWeight: isTop ? 'bold' : 'normal'
                 },
                 zlevel: isTop ? 10 : 1
             });
         });
 
         barChart.setOption({
-            title: { text: '全國各縣市前後胎壓未達標趨勢 (近 6 個月)', left: 'center', textStyle: { color: textColor, fontSize: 15 } },
+            title: { text: '全國各縣市前後胎壓未達標趨勢 (近 6 個月)', left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } },
             tooltip: { trigger: 'axis', backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor }, valueFormatter: (value) => value + '%' },
             legend: { show: false }, 
             grid: { left: '3%', right: '12%', bottom: '10%', top: '15%', containLabel: true }, 
-            xAxis: { type: 'category', data: months, axisLabel: { color: textColor }, axisLine: { lineStyle: { color: gridColor } } },
-            yAxis: { type: 'value', axisLabel: { color: textColor, formatter: '{value} %' }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
+            xAxis: { type: 'category', data: months, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
+            yAxis: { type: 'value', axisLabel: { color: textColor, formatter: '{value} %', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
             series: seriesData
         }, true);
         return;
@@ -438,7 +417,7 @@ function updateBarChart() {
     }
 
     barChart.setOption({
-        title: { text: chartTitle, left: 'center', textStyle: { color: textColor, fontSize: 15 } },
+        title: { text: chartTitle, left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } },
         tooltip: { 
             trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor },
             formatter: function(params) {
@@ -462,10 +441,10 @@ function updateBarChart() {
                 return html;
             }
         },
-        legend: { data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: textColor } },
+        legend: { data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: textColor, fontSize: 12 * globalFontScale } },
         grid: { left: '3%', right: '8%', bottom: '15%', top: '15%', containLabel: true },
-        xAxis: { type: 'category', data: regions, axisLabel: { color: textColor }, axisLine: { lineStyle: { color: gridColor } } },
-        yAxis: { type: 'value', min: function(val) { return isPercentage ? Math.max(0, Math.floor(val.min - 5)) : 0; }, axisLabel: { color: textColor, formatter: isPercentage ? '{value} %' : '{value}' }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
+        xAxis: { type: 'category', data: regions, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
+        yAxis: { type: 'value', min: function(val) { return isPercentage ? Math.max(0, Math.floor(val.min - 5)) : 0; }, axisLabel: { color: textColor, formatter: isPercentage ? '{value} %' : '{value}', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
         series: [
             { name: '3月 (前月)', type: 'bar', barWidth: '30%', itemStyle: { color: isLightMode ? '#cbd5e1' : '#475569', borderRadius: [4, 4, 0, 0] }, label: { show: false }, data: previousValues },
             {
@@ -480,8 +459,8 @@ function updateBarChart() {
                     }
                     return { value: val, itemStyle: { color: barColor } };
                 }),
-                label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: isPercentage ? '{c}%' : '{c}' },
-                markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `4月平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold' }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
+                label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: isPercentage ? '{c}%' : '{c}', fontSize: 12 * globalFontScale },
+                markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `4月平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
             }
         ]
     }, true);
@@ -550,7 +529,4 @@ async function initDashboard() {
 }
 
 initDashboard();
-
 window.addEventListener('resize', () => { mapChart.resize(); barChart.resize(); });
-
-
