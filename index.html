@@ -12,6 +12,13 @@
     <div class="header">
         <h1>維修維護提升改善會議 2026/04 資訊</h1>
         <div class="header-tools">
+            
+            <div class="slider-container" title="調整整體畫面與字體大小">
+                <span style="font-size: 16px; font-weight: bold; color: var(--text-primary); cursor: pointer;" onclick="document.getElementById('fontSizeSlider').value=1.5; document.getElementById('fontSizeSlider').dispatchEvent(new Event('input'));">A+</span>
+                <input type="range" id="fontSizeSlider" min="0.8" max="1.5" step="0.05" value="1" dir="rtl">
+                <span style="font-size: 12px; font-weight: bold; color: var(--text-primary); cursor: pointer;" onclick="document.getElementById('fontSizeSlider').value=0.8; document.getElementById('fontSizeSlider').dispatchEvent(new Event('input'));">A-</span>
+            </div>
+
             <button class="laser-toggle" id="laserToggleBtn" title="開啟雷射筆效果">🔴 雷射筆</button>
             <button class="presentation-toggle" id="presentationToggleBtn" title="鎖定地圖比例，適合會議投影">📺 投影模式</button>
             <button class="theme-toggle" id="themeToggleBtn">🌞 淺色模式</button>
@@ -132,6 +139,6 @@
     <div id="laser-dot" class="laser-dot"></div>
 
     <script src="js/data.js?v=1.6"></script>
-    <script src="js/app.js?v=1.4"></script>
+    <script src="js/app.js?v=1.5"></script>
 </body>
 </html>
