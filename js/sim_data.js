@@ -844,4 +844,3 @@ function processSimData() {
 // 當 index.html 載入 sim_data.js 時，這段程式碼會立刻執行，
 // 完美銜接後續 app.js 裡的雙擊彈跳視窗功能！
 processSimData();
-💡 大師的架構解析：
