@@ -1,21 +1,20 @@
 // js/app.js
 let isLightMode = false;
 let twGeoJson = null;
-let currentMode = 'stats'; // 'stats', 'tire', 'operability', 'maintenance', 'simulation'
+let currentMode = 'stats'; 
 let showingFleetDetails = false;
 let showingSimDetails = false;
+let isDataView = false; // 🌟 數據清單模式狀態
 
 let currentStatsMetric = 'station';
 let currentMaintenanceMetric = 'maintenance_rate';
 let currentSimulationMetric = 'sim_a';
 
-// 全局字體縮放倍率，專門用來計算 ECharts 內部的字體，防止點擊錯位
 let globalFontScale = 1;
 
 const mapChart = echarts.init(document.getElementById('mapChart'));
 const barChart = echarts.init(document.getElementById('barChart'));
 
-// 1. 動態生成子選單按鈕
 function renderSubButtons() {
     const btnContainer = document.getElementById('button-container');
     btnContainer.innerHTML = ''; 
@@ -77,7 +76,6 @@ function renderSubButtons() {
     }
 }
 
-// 2. 平行架構切換邏輯
 document.getElementById('nav-stats').addEventListener('click', (e) => switchMode('stats', e.target));
 document.getElementById('nav-tire').addEventListener('click', (e) => switchMode('tire', e.target));
 document.getElementById('nav-operability').addEventListener('click', (e) => switchMode('operability', e.target));
@@ -131,6 +129,9 @@ function switchMode(mode, targetElement) {
     updateLegendBox();
     updateMapTheme(); 
     
+    // 🌟 處理切換狀態
+    toggleDataView();
+    
     setTimeout(() => {
         mapChart.resize();
         if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
@@ -138,6 +139,95 @@ function switchMode(mode, targetElement) {
             updateBarChart(); 
         }
     }, 350);
+}
+
+// --- 🌟 資料報表切換邏輯 ---
+document.getElementById('mapDataToggleBtn').addEventListener('click', (e) => {
+    isDataView = !isDataView;
+    toggleDataView();
+});
+
+function toggleDataView() {
+    const dataContainer = document.getElementById('data-view-container');
+    const toggleBtn = document.getElementById('mapDataToggleBtn');
+    const legendBox = document.getElementById('legend-box-content');
+    const detailPanel = document.getElementById('cityDetailPanel');
+
+    // 如果是首頁 (stats)，強制顯示地圖，隱藏切換鈕
+    if (currentMode === 'stats') {
+        isDataView = false;
+        toggleBtn.classList.add('hidden');
+        dataContainer.classList.add('hidden');
+        legendBox.classList.remove('hidden');
+        return;
+    }
+
+    toggleBtn.classList.remove('hidden');
+    toggleBtn.innerText = isDataView ? '🗺️ 切換地圖顯示' : '📋 切換數據報表';
+
+    if (isDataView) {
+        dataContainer.classList.remove('hidden');
+        legendBox.classList.add('hidden');
+        detailPanel.style.display = 'none';
+        renderDataView();
+    } else {
+        dataContainer.classList.add('hidden');
+        legendBox.classList.remove('hidden');
+    }
+}
+
+function renderDataView() {
+    const container = document.getElementById('data-view-container');
+    let title = document.querySelector('.top-nav button.active').innerText;
+    let html = `<h3 style="margin-top:0; color:var(--accent-color); border-bottom:1px solid var(--border-color); padding-bottom:10px;">${title} - 各縣市明細報表</h3>`;
+    html += '<table class="clean-data-table"><thead><tr>';
+
+    if (currentMode === 'tire') {
+        html += '<th>縣市</th><th>25年11月</th><th>25年12月</th><th>26年01月</th><th>26年02月</th><th>26年03月</th><th>26年04月 (當月)</th></tr></thead><tbody>';
+        rawData.forEach(r => {
+            let v4m = r.tire_history[6];
+            let v4mColor = v4m > 4.0 ? 'var(--danger-color)' : 'var(--safe-color)';
+            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+                <td>${r.tire_history[1]}%</td><td>${r.tire_history[2]}%</td><td>${r.tire_history[3]}%</td>
+                <td>${r.tire_history[4]}%</td><td>${r.tire_history[5]}%</td>
+                <td style="color:${v4mColor};font-weight:bold;">${v4m}% (${r.tire_count}輛)</td></tr>`;
+        });
+    } else if (currentMode === 'operability') {
+        html += '<th>縣市</th><th>3月可動率</th><th>4月可動率</th><th>月度變動</th></tr></thead><tbody>';
+        rawData.forEach(r => {
+            let variance = (r.operability - r.operability_feb).toFixed(2);
+            let varianceSign = variance > 0 ? '+' : '';
+            let varColor = variance < 0 ? 'var(--danger-color)' : 'var(--safe-color)';
+            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+                <td>${r.operability_feb.toFixed(2)}%</td>
+                <td style="color:var(--accent-color);font-weight:bold;">${r.operability.toFixed(2)}%</td>
+                <td style="color:${varColor};font-weight:bold;">${varianceSign}${variance}%</td></tr>`;
+        });
+    } else if (currentMode === 'maintenance') {
+        html += '<th>縣市</th><th>總營運車輛</th><th>事故車輛數</th><th>維護記錄數</th><th>一級維護率</th><th>較上月變動</th></tr></thead><tbody>';
+        rawData.forEach(r => {
+            let varColor = r.m_var.includes('-') ? 'var(--danger-color)' : 'var(--safe-color)';
+            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+                <td>${r.m_fleet.toLocaleString()}</td>
+                <td style="color:var(--danger-color);font-weight:bold;">${r.m_accident}</td>
+                <td>${r.m_records.toLocaleString()}</td>
+                <td style="color:var(--accent-color);font-weight:bold;">${r.maintenance_rate}%</td>
+                <td style="color:${varColor};font-weight:bold;">${r.m_var}</td></tr>`;
+        });
+    } else if (currentMode === 'simulation') {
+        html += '<th>縣市</th><th>A級異常</th><th>B級異常</th><th>C級異常</th></tr></thead><tbody>';
+        rawData.forEach(r => {
+            let aColor = r.sim_a_ratio > 5.0 ? 'var(--danger-color)' : 'var(--text-primary)';
+            let bColor = r.sim_b_ratio > 20.0 ? 'var(--danger-color)' : 'var(--text-primary)';
+            let cColor = r.sim_c_ratio > 50.0 ? 'var(--danger-color)' : 'var(--text-primary)';
+            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+                <td style="color:${aColor};font-weight:bold;">${r.sim_a_count} 輛 (${r.sim_a_ratio}%)</td>
+                <td style="color:${bColor};font-weight:bold;">${r.sim_b_count} 輛 (${r.sim_b_ratio}%)</td>
+                <td style="color:${cColor};font-weight:bold;">${r.sim_c_count} 輛 (${r.sim_c_ratio}%)</td></tr>`;
+        });
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
 }
 
 function renderFleetDetails() {
@@ -191,7 +281,6 @@ function updateLegendBox() {
     }
 }
 
-// 5. 佈局比例、字體縮放、型號適配與雷射筆
 document.getElementById('layoutSlider').addEventListener('input', (e) => {
     const mapPct = e.target.value;
     const chartPct = 100 - mapPct;
@@ -292,10 +381,9 @@ document.addEventListener('mousemove', (e) => {
     if (isLaserMode) laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`;
 });
 
-// 6. ECharts 繪圖核心
 function getMapValue(item) {
     if (currentMode === 'stats') return item.overall;
-    else if (currentMode === 'tire') return item.tire_history[6]; // 百分比決定地圖顏色
+    else if (currentMode === 'tire') return item.tire_history[6]; 
     else if (currentMode === 'operability') return item.operability;
     else if (currentMode === 'maintenance') return item.maintenance_rate; 
     else if (currentMode === 'simulation') return item[currentSimulationMetric + '_ratio']; 
@@ -343,7 +431,7 @@ function updateMapTheme() {
             { type: 'lines', coordinateSystem: 'geo', zlevel: 2, lineStyle: { color: isLightMode ? '#64748b' : '#94a3b8', width: 1.5, opacity: 0.6, curveness: 0.2 }, data: lineData }, 
             { 
                 type: 'scatter', coordinateSystem: 'geo', zlevel: 3, 
-                symbolSize: 0, // 隱藏圓點，只留文字盒，解決連線尾端偏移
+                symbolSize: 0, 
                 data: scatterData, itemStyle: { color: accentColor }, 
                 label: {
                     show: true, 
