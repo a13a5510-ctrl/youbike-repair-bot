@@ -5,8 +5,6 @@ let currentMode = 'stats';
 let showingFleetDetails = false;
 let showingSimDetails = false;
 let isDataView = false; 
-
-// 🌟 新增：圖表數值 / 變動率 切換開關
 let showVariance = false; 
 
 let currentStatsMetric = 'station';
@@ -18,74 +16,70 @@ let globalFontScale = 1;
 const mapChart = echarts.init(document.getElementById('mapChart'));
 const barChart = echarts.init(document.getElementById('barChart'));
 
+// 🌟 1. 將 simJsonData 注入 rawData 的邏輯
+function injectSimData() {
+    if (typeof simJsonData !== 'undefined') {
+        simJsonData.forEach(sim => {
+            let target = rawData.find(r => r.region === sim.region);
+            if (target && sim.current_month.top_problems) {
+                target.top_problems = sim.current_month.top_problems; // 綁定解說文字
+            }
+        });
+    }
+}
+injectSimData();
+
 function renderSubButtons() {
     const btnContainer = document.getElementById('button-container');
     btnContainer.innerHTML = ''; 
     
-    if (currentMode === 'stats') {
-        statsMetrics.forEach((metric) => {
-            const btn = document.createElement('button');
-            btn.innerText = metric.label;
-            if (metric.key === currentStatsMetric) btn.classList.add('active');
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentStatsMetric = metric.key;
-                showVariance = false; // 切換時重置
-                
-                document.getElementById('main-dashboard').classList.remove('full-width-map');
-                document.getElementById('floating-stats-area').classList.add('hidden');
-                
-                toggleDataView();
-                if (isDataView) renderDataView(); 
-                
+    let metrics = [];
+    if (currentMode === 'stats') metrics = statsMetrics;
+    else if (currentMode === 'maintenance') metrics = maintenanceMetrics;
+    else if (currentMode === 'simulation') metrics = simulationMetrics;
+
+    metrics.forEach((metric) => {
+        const btn = document.createElement('button');
+        btn.innerText = metric.label;
+        
+        let isActive = false;
+        if(currentMode === 'stats' && currentStatsMetric === metric.key) isActive = true;
+        if(currentMode === 'maintenance' && currentMaintenanceMetric === metric.key) isActive = true;
+        if(currentMode === 'simulation' && currentSimulationMetric === metric.key) isActive = true;
+        
+        if (isActive) btn.classList.add('active');
+
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            if(currentMode === 'stats') currentStatsMetric = metric.key;
+            if(currentMode === 'maintenance') currentMaintenanceMetric = metric.key;
+            if(currentMode === 'simulation') currentSimulationMetric = metric.key;
+
+            showVariance = false; 
+            updateVarianceBtnUI();
+            
+            document.getElementById('main-dashboard').classList.remove('full-width-map');
+            document.getElementById('floating-stats-area').classList.add('hidden');
+            
+            toggleDataView();
+            if (isDataView) renderDataView(); 
+            
+            if (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info') {
+                document.getElementById('barChart').classList.add('hidden');
+                document.getElementById('varianceToggleBtn').classList.add('hidden');
+                document.getElementById('maintenance-info-area').classList.remove('hidden');
+            } else {
+                document.getElementById('barChart').classList.remove('hidden');
+                document.getElementById('maintenance-info-area').classList.add('hidden');
                 setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
                 updateBarChart(); 
-            });
-            btnContainer.appendChild(btn);
-        });
-    } else if (currentMode === 'maintenance') {
-        maintenanceMetrics.forEach((metric) => {
-            const btn = document.createElement('button');
-            btn.innerText = metric.label;
-            if (metric.key === currentMaintenanceMetric) btn.classList.add('active');
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentMaintenanceMetric = metric.key;
-                showVariance = false; // 切換時重置
-                
-                if(currentMaintenanceMetric === 'm_info') {
-                    document.getElementById('barChart').classList.add('hidden');
-                    document.getElementById('maintenance-info-area').classList.remove('hidden');
-                } else {
-                    document.getElementById('barChart').classList.remove('hidden');
-                    document.getElementById('maintenance-info-area').classList.add('hidden');
-                    updateBarChart(); 
-                }
-                if (isDataView) renderDataView(); 
-            });
-            btnContainer.appendChild(btn);
-        });
-    } else if (currentMode === 'simulation') {
-        simulationMetrics.forEach((metric) => {
-            const btn = document.createElement('button');
-            btn.innerText = metric.label;
-            if (metric.key === currentSimulationMetric) btn.classList.add('active');
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentSimulationMetric = metric.key;
-                showVariance = false; // 切換時重置
-
                 updateMapTheme();
-                updateLegendBox();
-                updateBarChart(); 
-                if (isDataView) renderDataView(); 
-            });
-            btnContainer.appendChild(btn);
+            }
         });
-    }
+        btnContainer.appendChild(btn);
+    });
 }
 
 document.getElementById('nav-stats').addEventListener('click', (e) => switchMode('stats', e.target));
@@ -98,7 +92,8 @@ function switchMode(mode, targetElement) {
     document.querySelectorAll('.top-nav button').forEach(btn => btn.classList.remove('active'));
     targetElement.classList.add('active');
     currentMode = mode;
-    showVariance = false; // 宇宙切換時重置
+    showVariance = false; 
+    updateVarianceBtnUI();
 
     const controlsArea = document.getElementById('button-container');
     const maintMetricsArea = document.getElementById('maintenance-metrics-area');
@@ -120,14 +115,9 @@ function switchMode(mode, targetElement) {
         currentStatsMetric = ''; 
     } else {
         dashboard.classList.remove('full-width-map'); 
-        
         if (mode === 'maintenance') {
             controlsArea.classList.remove('hidden');
             maintMetricsArea.classList.remove('hidden');
-            if(currentMaintenanceMetric === 'm_info') {
-                document.getElementById('barChart').classList.add('hidden');
-                infoArea.classList.remove('hidden');
-            }
         } else if (mode === 'simulation') {
             controlsArea.classList.remove('hidden');
             simMetricsArea.classList.remove('hidden');
@@ -140,7 +130,6 @@ function switchMode(mode, targetElement) {
     renderSubButtons();
     updateLegendBox();
     updateMapTheme(); 
-    
     toggleDataView();
     
     setTimeout(() => {
@@ -157,6 +146,24 @@ document.getElementById('mapDataToggleBtn').addEventListener('click', (e) => {
     toggleDataView();
 });
 
+// 🌟 實體切換按鈕邏輯
+const varianceToggleBtn = document.getElementById('varianceToggleBtn');
+varianceToggleBtn.addEventListener('click', () => {
+    showVariance = !showVariance;
+    updateVarianceBtnUI();
+    updateBarChart();
+});
+
+function updateVarianceBtnUI() {
+    if (currentMode === 'tire' || currentMode === 'stats' && currentStatsMetric === '') {
+        varianceToggleBtn.classList.add('hidden');
+        return;
+    }
+    varianceToggleBtn.classList.remove('hidden');
+    varianceToggleBtn.innerText = showVariance ? '🔙 切換為：本月數值' : '🔄 切換為：較上月變動';
+    varianceToggleBtn.classList.toggle('active-mode', showVariance);
+}
+
 function toggleDataView() {
     const dataContainer = document.getElementById('data-view-container');
     const toggleBtn = document.getElementById('mapDataToggleBtn');
@@ -170,11 +177,13 @@ function toggleDataView() {
         dataContainer.classList.add('hidden');
         legendBox.classList.remove('hidden');
         floatingStats.classList.remove('hidden');
+        varianceToggleBtn.classList.add('hidden');
         return;
     }
 
     toggleBtn.classList.remove('hidden');
     toggleBtn.innerText = isDataView ? '🗺️ 切換地圖顯示' : '📋 切換數據報表';
+    updateVarianceBtnUI();
 
     if (isDataView) {
         dataContainer.classList.remove('hidden');
@@ -189,29 +198,55 @@ function toggleDataView() {
     }
 }
 
-// 🌟 雙向互動引擎：點擊表格或折線時互相高亮
-window.highlightTireData = function(region) {
-    if (currentMode !== 'tire') return;
+// 🌟 全域雙向互動引擎 (支援點擊列表或點擊圖表)
+window.handleRowClick = function(region) {
+    if (!isDataView) {
+        document.getElementById('mapDataToggleBtn').click();
+    }
     
-    // 1. 讓左側表格反紅
-    if (isDataView) {
-        document.querySelectorAll('.clean-data-table tbody tr').forEach(tr => tr.classList.remove('row-highlight'));
-        const targetRow = document.getElementById(`row-${region}`);
-        if (targetRow) {
-            targetRow.classList.add('row-highlight');
-            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+    // 1. 表格高亮
+    document.querySelectorAll('.clean-data-table tbody tr').forEach(tr => tr.classList.remove('row-highlight'));
+    const targetRow = document.getElementById(`row-${region}`);
+    if (targetRow) {
+        targetRow.classList.add('row-highlight');
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    // 2. 讓右側 ECharts 曲線發光 (觸發 emphasis)
+    // 2. 圖表高亮
     barChart.dispatchAction({ type: 'downplay' });
-    barChart.dispatchAction({ type: 'highlight', seriesName: region });
+    barChart.dispatchAction({ type: 'highlight', name: region, seriesName: region });
+    
+    let dataIndex = barChart.getOption().xAxis[0].data.findIndex(d => d === region);
+    if (currentMode === 'tire') dataIndex = 5; 
+
     barChart.dispatchAction({
         type: 'showTip',
-        seriesIndex: barChart.getOption().series.findIndex(s => s.name === region),
-        dataIndex: 5
+        seriesIndex: currentMode === 'tire' ? barChart.getOption().series.findIndex(s => s.name === region) : (showVariance ? 0 : 1),
+        dataIndex: dataIndex > -1 ? dataIndex : 0,
+        name: region
     });
+
+    // 🌟 3. 模擬體驗模式專屬：彈跳問題分析視窗
+    if (currentMode === 'simulation') {
+        const item = rawData.find(r => r.region === region);
+        let grade = currentSimulationMetric.replace('sim_', ''); // 'a', 'b', 'c'
+        if (item && item.top_problems && item.top_problems[grade]) {
+            document.getElementById('simModalTitle').innerText = `${region} - ${grade.toUpperCase()}級 異常分析`;
+            
+            // 將文字斷行處理，加上條列式
+            let probs = item.top_problems[grade].split('、').map(p => `<li>${p}</li>`).join('');
+            document.getElementById('simModalBody').innerHTML = `<ul style="padding-left: 20px;">${probs}</ul>`;
+            
+            document.getElementById('simModal').classList.remove('hidden');
+        }
+    }
 };
+
+// 🌟 ECharts 點擊觸發反向連動
+barChart.on('click', function(params) {
+    let region = currentMode === 'tire' ? params.seriesName : params.name;
+    if (region) handleRowClick(region);
+});
 
 function renderDataView() {
     const container = document.getElementById('data-view-container');
@@ -223,20 +258,18 @@ function renderDataView() {
         let cl = (key) => currentStatsMetric === key ? 'class="active-col"' : '';
         html += `<th>縣市</th><th>綜合分數</th><th ${cl('station')}>場站妥善度</th><th ${cl('appearance')}>外觀標示</th><th ${cl('functionality')}>重要機能</th><th ${cl('ems')}>EMS維護率</th><th ${cl('operability')}>可動率</th></tr></thead><tbody>`;
         rawData.forEach(r => {
-            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+            html += `<tr id="row-${r.region}" onclick="handleRowClick('${r.region}')">
+                <td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
                 <td style="color:var(--accent-color);font-weight:bold;">${r.overall} 分</td>
-                <td ${cl('station')}>${r.station} 分</td>
-                <td ${cl('appearance')}>${r.appearance} 分</td>
-                <td ${cl('functionality')}>${r.functionality} 分</td>
-                <td ${cl('ems')}>${r.ems}%</td>
-                <td ${cl('operability')}>${r.operability}%</td></tr>`;
+                <td ${cl('station')}>${r.station} 分</td><td ${cl('appearance')}>${r.appearance} 分</td>
+                <td ${cl('functionality')}>${r.functionality} 分</td><td ${cl('ems')}>${r.ems}%</td><td ${cl('operability')}>${r.operability}%</td></tr>`;
         });
     } else if (currentMode === 'tire') {
         html += '<th>縣市</th><th>25年11月</th><th>25年12月</th><th>26年01月</th><th>26年02月</th><th>26年03月</th><th>26年04月 (當月)</th></tr></thead><tbody>';
         rawData.forEach(r => {
             let v4m = r.tire_history[6];
             let v4mColor = v4m > 4.5 ? 'var(--danger-color)' : (v4m > 4.0 ? 'var(--warning-color)' : 'var(--safe-color)');
-            html += `<tr id="row-${r.region}" onclick="highlightTireData('${r.region}')" style="cursor:pointer; transition: all 0.3s;">
+            html += `<tr id="row-${r.region}" onclick="handleRowClick('${r.region}')">
                 <td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
                 <td>${r.tire_history[1]}%</td><td>${r.tire_history[2]}%</td><td>${r.tire_history[3]}%</td>
                 <td>${r.tire_history[4]}%</td><td>${r.tire_history[5]}%</td>
@@ -248,7 +281,8 @@ function renderDataView() {
             let variance = (r.operability - r.operability_feb).toFixed(2);
             let varianceSign = variance > 0 ? '+' : '';
             let varColor = variance < 0 ? 'var(--danger-color)' : 'var(--safe-color)';
-            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+            html += `<tr id="row-${r.region}" onclick="handleRowClick('${r.region}')">
+                <td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
                 <td>${r.operability_feb.toFixed(2)}%</td>
                 <td style="color:var(--accent-color);font-weight:bold;">${r.operability.toFixed(2)}%</td>
                 <td style="color:${varColor};font-weight:bold;">${varianceSign}${variance}%</td></tr>`;
@@ -260,11 +294,10 @@ function renderDataView() {
         html += `<th>縣市</th><th>總營運車輛</th><th ${clAcc}>事故車輛數</th><th ${clRec}>維護記錄數</th><th ${clRate}>一級維護率</th><th>較上月變動</th></tr></thead><tbody>`;
         rawData.forEach(r => {
             let varColor = r.m_var.includes('-') ? 'var(--danger-color)' : 'var(--safe-color)';
-            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
-                <td>${r.m_fleet.toLocaleString()}</td>
-                <td ${clAcc} style="color:var(--danger-color);font-weight:bold;">${r.m_accident}</td>
-                <td ${clRec}>${r.m_records.toLocaleString()}</td>
-                <td ${clRate} style="color:var(--accent-color);font-weight:bold;">${r.maintenance_rate}%</td>
+            html += `<tr id="row-${r.region}" onclick="handleRowClick('${r.region}')">
+                <td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+                <td>${r.m_fleet.toLocaleString()}</td><td ${clAcc} style="color:var(--danger-color);font-weight:bold;">${r.m_accident}</td>
+                <td ${clRec}>${r.m_records.toLocaleString()}</td><td ${clRate} style="color:var(--accent-color);font-weight:bold;">${r.maintenance_rate}%</td>
                 <td style="color:${varColor};font-weight:bold;">${r.m_var}</td></tr>`;
         });
     } else if (currentMode === 'simulation') {
@@ -276,7 +309,8 @@ function renderDataView() {
             let aColor = r.sim_a_ratio > 5.0 ? 'var(--danger-color)' : 'var(--text-primary)';
             let bColor = r.sim_b_ratio > 20.0 ? 'var(--danger-color)' : 'var(--text-primary)';
             let cColor = r.sim_c_ratio > 50.0 ? 'var(--danger-color)' : 'var(--text-primary)';
-            html += `<tr><td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
+            html += `<tr id="row-${r.region}" onclick="handleRowClick('${r.region}')">
+                <td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
                 <td ${clA} style="color:${aColor};font-weight:bold;">${r.sim_a_count} 輛 (${r.sim_a_ratio}%)</td>
                 <td ${clB} style="color:${bColor};font-weight:bold;">${r.sim_b_count} 輛 (${r.sim_b_ratio}%)</td>
                 <td ${clC} style="color:${cColor};font-weight:bold;">${r.sim_c_count} 輛 (${r.sim_c_ratio}%)</td></tr>`;
@@ -482,7 +516,7 @@ function updateMapTheme() {
                         let unit = '%'; if(currentMode === 'stats') unit = '分';
                         return `{region|${params.name}}\n{score|${params.value[2]} ${unit}}`; 
                     },
-                    backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#94a3b8' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4,
+                    backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#94a3b8' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4, 
                     rich: { 
                         region: { color: textColor, fontSize: 13 * globalFontScale, fontWeight: 'bold', align: 'center', padding: [0, 0, 4, 0] }, 
                         score: { color: accentColor, fontSize: 14 * globalFontScale, fontWeight: 'bold', align: 'center' } 
@@ -493,7 +527,6 @@ function updateMapTheme() {
     }, false); 
 }
 
-// 🌟 圖表核心渲染 (加入變動率切換邏輯)
 function updateBarChart() {
     if (!twGeoJson || (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info')) return;
     
@@ -522,7 +555,6 @@ function updateBarChart() {
                 name: item.region, type: 'line', data: item.tire_history.slice(1), smooth: true, symbol: isBad ? 'circle' : 'none', symbolSize: 8,
                 lineStyle: { width: isBad ? 4 : 2, opacity: isBad ? 1 : 0.4 },
                 itemStyle: { color: lineColor },
-                // 🌟 新增：Hover 或外部 Focus 時的高亮效果 (發光加粗)
                 emphasis: {
                     focus: 'series',
                     lineStyle: { width: 7, shadowBlur: 15, shadowColor: lineColor, opacity: 1 },
@@ -553,7 +585,6 @@ function updateBarChart() {
 
     let regions, currentValues, previousValues, varianceValues, chartTitle, avgValue, isPercentage = false;
 
-    // 取得變數顏色的邏輯判斷
     const getVarColor = (val) => {
         if (val === 0) return isLightMode ? '#94a3b8' : '#475569';
         if (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_accident') return val > 0 ? dangerColor : safeColor;
@@ -567,7 +598,7 @@ function updateBarChart() {
         currentValues = sortedData.map(item => item[currentStatsMetric]); 
         previousValues = sortedData.map(item => item[currentStatsMetric + '_feb']);
         varianceValues = sortedData.map(item => parseFloat((item[currentStatsMetric] - item[currentStatsMetric + '_feb']).toFixed(2)));
-        chartTitle = `各區指標對比 - ${statsMetrics.find(m => m.key === currentStatsMetric).label}`;
+        chartTitle = `各區指標對比 - ${statsMetrics.find(m => m.key === currentStatsMetric).label} (由低至高)`;
     } else if (currentMode === 'operability') {
         isPercentage = true;
         const sortedData = [...rawData].sort((a, b) => a.operability - b.operability);
@@ -575,7 +606,7 @@ function updateBarChart() {
         currentValues = sortedData.map(item => item.operability); 
         previousValues = sortedData.map(item => item.operability_feb);
         varianceValues = sortedData.map(item => parseFloat((item.operability - item.operability_feb).toFixed(2)));
-        chartTitle = `各縣市場站可動率對比`;
+        chartTitle = `各縣市場站可動率對比 (由低至高)`;
     } else if (currentMode === 'maintenance') {
         isPercentage = currentMaintenanceMetric === 'maintenance_rate';
         const sortLogic = currentMaintenanceMetric === 'm_accident' ? (a, b) => b[currentMaintenanceMetric] - a[currentMaintenanceMetric] : (a, b) => a[currentMaintenanceMetric] - b[currentMaintenanceMetric];
@@ -592,13 +623,12 @@ function updateBarChart() {
         currentValues = sortedData.map(item => item[currentSimulationMetric + '_ratio']); 
         previousValues = sortedData.map(item => item[currentSimulationMetric + '_lm']);
         varianceValues = sortedData.map(item => parseFloat((item[currentSimulationMetric + '_ratio'] - item[currentSimulationMetric + '_lm']).toFixed(2)));
-        chartTitle = `${simulationMetrics.find(m => m.key === currentSimulationMetric).label}異常占比對比`;
+        chartTitle = `${simulationMetrics.find(m => m.key === currentSimulationMetric).label}異常占比對比 (由高至低)`;
     }
 
     let displayData = showVariance ? varianceValues : currentValues;
     avgValue = (displayData.reduce((acc, curr) => acc + curr, 0) / displayData.length).toFixed(isPercentage ? 2 : 1);
 
-    // 🌟 組合動態長條圖的 Series
     let seriesConfig = [];
     if (showVariance) {
         seriesConfig = [{
@@ -629,12 +659,7 @@ function updateBarChart() {
     }
 
     barChart.setOption({
-        title: { 
-            text: chartTitle + (showVariance ? ' - 較上月變動' : ' - 本月數值'), 
-            subtext: '💡 點擊圖表任意處切換【本月數值】與【較上月變動】', // 🌟 加入點擊提示語
-            subtextStyle: { color: accentColor, fontSize: 12 * globalFontScale, fontWeight: 'bold' },
-            left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } 
-        },
+        title: { text: chartTitle + (showVariance ? ' - 較上月變動' : ' - 本月數值'), left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } },
         tooltip: { 
             trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor },
             formatter: function(params) {
@@ -644,29 +669,12 @@ function updateBarChart() {
             }
         },
         legend: { show: !showVariance, data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: textColor, fontSize: 12 * globalFontScale } },
-        grid: { left: '3%', right: '8%', bottom: '15%', top: '18%', containLabel: true },
+        grid: { left: '3%', right: '8%', bottom: '15%', top: '15%', containLabel: true },
         xAxis: { type: 'category', data: regions, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
         yAxis: { type: 'value', min: function(val) { return (isPercentage && !showVariance) ? Math.max(0, Math.floor(val.min - 5)) : null; }, axisLabel: { color: textColor, formatter: isPercentage ? '{value} %' : '{value}', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
         series: seriesConfig
     }, true);
 }
-
-// 🌟 點擊長條圖任意處，一鍵切換「本月數值 / 變動率」
-barChart.getZr().on('click', function(event) {
-    if (currentMode === 'tire') return; // 胎壓有自己的連動邏輯
-    showVariance = !showVariance;
-    updateBarChart();
-});
-
-// 🌟 折線圖點擊追蹤 (觸發 Emphasis 與表格連動)
-barChart.on('click', function(params) {
-    if (currentMode === 'tire' && params.seriesType === 'line') {
-        if (!isDataView) {
-            document.getElementById('mapDataToggleBtn').click();
-        }
-        setTimeout(() => window.highlightTireData(params.seriesName), 150);
-    }
-});
 
 function setupMapClickEvent() {
     mapChart.on('click', function(params) {
