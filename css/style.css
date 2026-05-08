@@ -201,10 +201,43 @@ body.presentation-mode .map-panel { min-width: 600px !important; max-width: 800p
     opacity: 1;
 }
 
-/* --- 右上角工具列按鈕樣式 (全區方格化) --- */
+/* --- 面板左右比例平滑過渡 --- */
+#map-panel-container { transition: flex 0.2s ease-out; flex: 1; }
+#right-chart-panel { transition: flex 0.2s ease-out; flex: 1; }
+
+/* --- 雙拉環控制台樣式 --- */
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    padding: 0 10px;
+    border-radius: 6px;
+    height: 33px; 
+    margin-right: 8px; 
+}
+
+.slider-container input[type="range"] {
+    width: 60px;
+    cursor: pointer;
+    accent-color: var(--accent-color); 
+}
+
+.slider-icon { font-size: 14px; }
+.slider-btn { 
+    font-size: 14px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    color: var(--text-primary); 
+    transition: 0.2s; 
+}
+.slider-btn:hover { color: var(--accent-color); text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
+
+/* --- 覆蓋右上角工具按鈕樣式 (全區方格化) --- */
 .header-tools button {
     border-radius: 6px !important;
-    background: var(--panel-bg); /* 與面板底色一致，帶透明感 */
+    background: var(--panel-bg);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
     padding: 6px 12px;
@@ -218,36 +251,17 @@ button.laser-toggle.active {
     background-color: var(--warning-color) !important; 
     border-color: var(--warning-color) !important;
     color: #ffffff !important;
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); /* 橘色微光 */
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); 
     font-weight: bold;
 }
+.header-tools button:hover { background: rgba(56, 189, 248, 0.15); border-color: var(--accent-color); }
 
-/* 懸停效果增強 */
-.header-tools button:hover {
-    background: rgba(56, 189, 248, 0.15);
-    border-color: var(--accent-color);
+/* 雷射點 */
+.laser-dot {
+    position: fixed; top: 0; left: 0; width: 16px; height: 16px;
+    background-color: #ff0000; border-radius: 50%; pointer-events: none; z-index: 999999;
+    box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000;
+    opacity: 0; display: none;
 }
-
-/* --- 字體/畫面縮放拉環樣式 --- */
-.slider-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--panel-bg);
-    border: 1px solid var(--border-color);
-    padding: 0 12px;
-    border-radius: 6px;
-    height: 33px; /* 對齊工具列按鈕高度 */
-    margin-right: 15px; /* 與其他按鈕保持距離 */
-}
-
-#fontSizeSlider {
-    width: 80px;
-    cursor: pointer;
-    accent-color: var(--accent-color); /* 統一系統色系 */
-}
-
-.slider-container span:hover {
-    color: var(--accent-color) !important;
-    text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
-}
+.laser-dot.active { display: block; opacity: 1; }
+body.laser-active, body.laser-active * { cursor: none !important; }
