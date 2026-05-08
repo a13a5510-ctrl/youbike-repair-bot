@@ -804,3 +804,44 @@ const simJsonData = [
         }
     }
 ]
+
+// 負責自動從 probA, probB, probC 抓出數量最高的前三名問題，動態生成字串
+function processSimData() {
+    if (typeof simJsonData === 'undefined') return;
+    
+    simJsonData.forEach(regionData => {
+        let cm = regionData.current_month;
+        if (!cm) return;
+        
+        // 建立一個空的 top_problems 來存放自動運算的結果
+        cm.top_problems = {};
+        
+        // 針對 A, B, C 三個級別進行自動運算
+        ['A', 'B', 'C'].forEach(grade => {
+            let probKey = 'prob' + grade; // 取得 probA, probB, probC
+            let lowerGrade = grade.toLowerCase(); // 對應為 a, b, c
+            
+            // 如果這個縣市有該級別的問題紀錄，且不是空物件
+            if (cm[probKey] && Object.keys(cm[probKey]).length > 0) {
+                // 1. 將 Object 轉換為 Array，格式為 [["問題名稱", 數量], ...]
+                let sortedProbs = Object.entries(cm[probKey])
+                    // 2. 依照數量 (Value) 由大到小進行降冪排序
+                    .sort((a, b) => b[1] - a[1])
+                    // 3. 只切出最高的前 3 名
+                    .slice(0, 3);
+                
+                // 4. 將結果組合為 "問題名稱(數量)、問題名稱(數量)" 的字串格式
+                cm.top_problems[lowerGrade] = sortedProbs.map(p => `${p[0]}(${p[1]})`).join('、');
+            } else {
+                // 如果沒有紀錄，填入預設文字
+                cm.top_problems[lowerGrade] = "目前無具體問題紀錄";
+            }
+        });
+    });
+}
+
+// 啟動引擎！
+// 當 index.html 載入 sim_data.js 時，這段程式碼會立刻執行，
+// 完美銜接後續 app.js 裡的雙擊彈跳視窗功能！
+processSimData();
+💡 大師的架構解析：
