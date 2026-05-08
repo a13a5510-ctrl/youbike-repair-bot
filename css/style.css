@@ -78,10 +78,7 @@ body {
 }
 #map-panel-container { flex: 1; transition: flex 0.2s ease-out; }
 #right-chart-panel { flex: 1; padding: 15px; transition: flex 0.2s ease-out; }
-.chart-container { flex: 1; width: 100%; min-height: 300px; cursor: pointer; /* 讓圖表區看起來可點擊 */ }
-
-.full-width-map #map-panel-container { flex: 100% !important; }
-.full-width-map #right-chart-panel { display: none; }
+.chart-container { flex: 1; width: 100%; min-height: 300px; cursor: pointer; }
 
 /* --- 浮動資訊面板 --- */
 .legend-box {
@@ -169,6 +166,63 @@ button.presentation-toggle.active, button.laser-toggle.active {
     color: #ffffff !important; font-weight: bold; box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); 
 }
 
+/* --- 🌟 完美修復版：懸停展開按鈕特效 (抽屜式) --- */
+.hover-expand-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    width: 38px !important; /* 收合時只顯示 Icon */
+    height: 38px;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 !important; /* 清除 padding 避免擠壓 */
+    box-sizing: border-box;
+    border-radius: 6px;
+}
+.hover-expand-btn .btn-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0; /* 防止圖示被壓縮 */
+}
+.hover-expand-btn .btn-text {
+    opacity: 0;
+    transition: opacity 0.2s;
+    font-size: 13px;
+    padding-right: 15px;
+    font-weight: bold;
+}
+.hover-expand-btn:hover {
+    width: 145px !important; /* 展開時的寬度 */
+}
+.hover-expand-btn:hover .btn-text {
+    opacity: 1;
+}
+
+/* 懸停按鈕的位置與顏色 */
+.map-data-toggle {
+    position: absolute; top: 20px; right: 20px; z-index: 30;
+    background: var(--panel-bg); border: 1px solid var(--accent-color);
+    color: var(--accent-color); cursor: pointer; backdrop-filter: blur(10px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+.map-data-toggle:hover { background: var(--accent-color); color: #fff; box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
+
+.variance-toggle-btn {
+    position: absolute; top: 15px; right: 20px; z-index: 20;
+    background: var(--panel-bg); border: 1px solid var(--border-color);
+    color: var(--text-primary); cursor: pointer; backdrop-filter: blur(10px);
+}
+.variance-toggle-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+.variance-toggle-btn.active-mode {
+    background: var(--warning-color); color: #fff; border-color: var(--warning-color);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
 /* --- 雷射點特效 --- */
 .laser-dot {
     position: fixed; top: 0; left: 0; width: 16px; height: 16px;
@@ -179,15 +233,6 @@ button.presentation-toggle.active, button.laser-toggle.active {
 .laser-dot.active { display: block; opacity: 1; }
 body.laser-active, body.laser-active * { cursor: none !important; }
 
-/* --- 🌟 地圖與數據切換按鈕 --- */
-.map-data-toggle {
-    position: absolute; top: 20px; right: 20px; z-index: 30;
-    background: var(--panel-bg); border: 1px solid var(--accent-color);
-    color: var(--accent-color); padding: 8px 15px; border-radius: 6px;
-    font-weight: bold; cursor: pointer; backdrop-filter: blur(10px);
-    transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-.map-data-toggle:hover { background: var(--accent-color); color: #fff; box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
 
 /* --- 🌟 數據報表視窗與連動高光 --- */
 .data-view-container {
@@ -209,8 +254,8 @@ body.laser-active, body.laser-active * { cursor: none !important; }
 
 /* 🌟 極致清晰：直行高光 (追蹤上方選單) */
 .clean-data-table th.active-col {
-    background: var(--accent-color) !important; /* 填滿科技藍 */
-    color: #ffffff !important;                  /* 純白字體，對比度最高 */
+    background: var(--accent-color) !important; 
+    color: #ffffff !important;                  
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 .clean-data-table td.active-col {
@@ -230,42 +275,6 @@ body.laser-active, body.laser-active * { cursor: none !important; }
     border-bottom: 2px solid var(--danger-color);
     border-top: 2px solid var(--danger-color);
     transition: all 0.3s;
-}
-
-/* 隱藏舊版投影機下拉框 (如果還有的話) */
-.projector-select { display: none; }
-
-/* --- 沉浸式投影模式核心樣式 --- */
-body.full-projection-active { overflow: hidden !important; background: #000 !important; }
-body.full-projection-active .header { display: none !important; }
-body.full-projection-active .dashboard {
-    height: 100vh !important; width: 100vw !important;
-    padding: 0 !important; margin: 0 !important;
-    position: fixed; top: 0; left: 0; z-index: 9999;
-}
-
-/* --- 🌟 實體變動率切換按鈕 --- */
-.variance-toggle-btn {
-    position: absolute; top: 15px; right: 20px; z-index: 20;
-    background: var(--panel-bg); border: 1px solid var(--border-color);
-    color: var(--text-primary); padding: 6px 12px; border-radius: 6px;
-    font-size: 13px; font-weight: bold; cursor: pointer;
-    backdrop-filter: blur(10px); transition: all 0.3s;
-}
-.variance-toggle-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
-.variance-toggle-btn.active-mode {
-    background: var(--warning-color); color: #fff; border-color: var(--warning-color);
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-}
-
-/* --- 🌟 極致清晰：橫列高光 (與右側圖表雙向連動) --- */
-.clean-data-table tbody tr { transition: all 0.3s; cursor: pointer; }
-.clean-data-table tbody tr.row-highlight td {
-    background: var(--accent-color) !important;
-    color: #ffffff !important;
-    font-weight: bold;
-    border-top: 1px solid #fff; border-bottom: 1px solid #fff;
-    box-shadow: 0 4px 10px rgba(56, 189, 248, 0.4);
 }
 
 /* --- 🌟 彈跳視窗 Modal --- */
@@ -288,63 +297,11 @@ body.full-projection-active .dashboard {
 }
 .modal-close-btn:hover { background: var(--danger-color); color: #fff; border-color: var(--danger-color); }
 
-/* --- 🌟 懸停展開按鈕特效 (抽屜式) --- */
-.hover-expand-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 38px; /* 初始只顯示圖標的寬度 */
-    overflow: hidden;
-    white-space: nowrap;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 6px !important;
+/* --- 沉浸式投影模式核心樣式 --- */
+body.full-projection-active { overflow: hidden !important; background: #000 !important; }
+body.full-projection-active .header { display: none !important; }
+body.full-projection-active .dashboard {
+    height: 100vh !important; width: 100vw !important;
+    padding: 0 !important; margin: 0 !important;
+    position: fixed; top: 0; left: 0; z-index: 9999;
 }
-.hover-expand-btn .btn-icon {
-    font-size: 16px;
-    width: 24px;
-    text-align: center;
-    flex-shrink: 0;
-}
-.hover-expand-btn .btn-text {
-    opacity: 0;
-    transition: opacity 0.2s;
-    font-size: 13px;
-    margin-left: 5px;
-}
-.hover-expand-btn:hover {
-    width: 145px; /* 懸停時拉長以顯示文字 */
-    padding: 6px 12px !important;
-}
-.hover-expand-btn:hover .btn-text {
-    opacity: 1;
-}
-
-/* 按鈕位置微調 */
-.map-data-toggle {
-    position: absolute; top: 20px; right: 20px; z-index: 30;
-    background: var(--panel-bg); border: 1px solid var(--accent-color);
-    color: var(--accent-color); border-radius: 6px;
-    font-weight: bold; cursor: pointer; backdrop-filter: blur(10px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-.map-data-toggle:hover { background: var(--accent-color); color: #fff; box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
-
-.variance-toggle-btn {
-    position: absolute; top: 15px; right: 20px; z-index: 20;
-    background: var(--panel-bg); border: 1px solid var(--border-color);
-    color: var(--text-primary); border-radius: 6px;
-    font-weight: bold; cursor: pointer; backdrop-filter: blur(10px);
-}
-.variance-toggle-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
-.variance-toggle-btn.active-mode {
-    background: var(--warning-color); color: #fff; border-color: var(--warning-color);
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-}
-
-/* 視圖切換按鈕樣式 */
-.header-btn {
-    background: var(--panel-bg); border: 1px solid var(--border-color);
-    color: var(--text-primary); border-radius: 6px; padding: 6px 12px;
-    font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s;
-}
-.header-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
