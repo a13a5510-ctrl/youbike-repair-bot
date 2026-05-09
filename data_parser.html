@@ -176,29 +176,9 @@
         <textarea id="jsonOutput" readonly></textarea>
     </div>
 
-    <script>
-        let rawData = [];
+    let rawData = [];
         let problemColumns = []; // 用來存儲被判定為「異常問題」的欄位名稱
-        // 假設你原本讀到一個問題： let issueName = row['問題描述'];
-// 假設你原本讀到數量： let count = parseInt(row['數量']);
 
-// 1. 透過天網字典，強制鑑定它的真實級別！
-let realGrade = autoGradeIssue(issueName); 
-
-// 2. 將它存入對應縣市的 probA, probB 或 probC 陣列中
-if (!cityData[realGrade + '_issues']) {
-    cityData[realGrade + '_issues'] = {};
-}
-
-// 累加數量
-if (cityData[realGrade + '_issues'][issueName]) {
-    cityData[realGrade + '_issues'][issueName] += count;
-} else {
-    cityData[realGrade + '_issues'][issueName] = count;
-}
-
-
-        
         const targetRegionOrder = [
             "雙北", "桃園", "新竹", "苗栗", "台中", 
             "彰化", "雲林", "嘉義", "台南", "高雄", "屏東"
@@ -211,16 +191,27 @@ if (cityData[realGrade + '_issues'][issueName]) {
             "一級檢修人員", "一級異常", "車輛異常", "一級維修異常", "總計"
         ];
 
+        // 🌟 1. 天網字典：放置於最上方，只初始化一次
         const GRADING_RULES = [
-    // A級：重大問題 (安全) - 只要字串包含這些字，絕對是 A
-    { grade: 'a', keywords: ['滑落無法固定', '分離', '不亮', '無提示音', '無法發出鈴聲', '煞車失靈'] },
-    
-    // B級：重點問題 (觀感)
-    { grade: 'b', keywords: ['髒污', '塗鴉', '廣告', '褪色', '異音', '偏擺', '龜裂', '不順'] },
-    
-    // C級：一般問題 (內部管理)
-    { grade: 'c', keywords: ['垃圾', '貼紙', '掉漆', '鏽蝕', '泥除'] }
-];
+            // A級：重大問題 (安全)
+            { grade: 'a', keywords: ['滑落無法固定', '分離', '不亮', '無提示音', '無法發出鈴聲', '煞車失靈', '變形'] },
+            // B級：重點問題 (觀感)
+            { grade: 'b', keywords: ['髒污', '髒汙', '塗鴉', '廣告', '褪色', '異音', '偏擺', '龜裂', '不順', '搖晃', '歪斜'] },
+            // C級：一般問題 (內部管理)
+            { grade: 'c', keywords: ['垃圾', '貼紙', '掉漆', '脫漆', '鏽蝕', '泥除'] }
+        ];
+
+        // 🤖 2. 自動分級鑑定器
+        function autoGradeIssue(issueString) {
+            for (let rule of GRADING_RULES) {
+                for (let kw of rule.keywords) {
+                    if (issueString.includes(kw)) {
+                        return rule.grade; // 命中關鍵字，回傳 a, b, 或 c
+                    }
+                }
+            }
+            return 'c'; // 預設歸類為 C 級
+        }
 
         document.getElementById('csvFileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -247,7 +238,7 @@ if (cityData[realGrade + '_issues'][issueName]) {
                         return;
                     }
 
-                    // 🌟 動態判斷：哪些欄位是「問題敘述」？
+                    // 找出所有的問題敘述欄位
                     problemColumns = headers.filter(h => h && !metadataCols.includes(h));
 
                     rawData = [];
@@ -273,11 +264,21 @@ if (cityData[realGrade + '_issues'][issueName]) {
             return `<span class="trend-down">${valStr}</span>`;
         }
 
-        // 🌟 排序並取得 Top N 的輔助函式
-        function getTopProblems(probObj, limit = 3) {
-            let sorted = Object.entries(probObj).sort((a, b) => b[1] - a[1]);
-            if (sorted.length === 0) return "無異常紀錄";
-            return sorted.slice(0, limit).map(item => `${item[0]}(${item[1]})`).join('、');
+        // 🤖 3. 自動排序與前三名產出引擎 (取代舊的 getTopProblems)
+        function generateFinalTopProblems(cityCurrentData) {
+            let top_problems = {};
+            ['a', 'b', 'c'].forEach(grade => {
+                let issues = cityCurrentData['prob' + grade.toUpperCase()]; // 抓取 probA, probB, probC
+                if (issues && Object.keys(issues).length > 0) {
+                    let sorted = Object.entries(issues)
+                        .sort((a, b) => b[1] - a[1]) // 由大到小排序
+                        .slice(0, 3); // 取前三名
+                    top_problems[grade] = sorted.map(p => `${p[0]}(${p[1]})`).join('、');
+                } else {
+                    top_problems[grade] = "目前無具體問題紀錄";
+                }
+            });
+            return top_problems;
         }
 
         function processData() {
@@ -303,14 +304,14 @@ if (cityData[realGrade + '_issues'][issueName]) {
                 if (!stats[region]) {
                     stats[region] = {
                         current: { total: 0, a: 0, b: 0, c: 0, probA: {}, probB: {}, probC: {} },
-                        prev: { total: 0, a: 0, b: 0, c: 0 } // 上個月暫時不抓明細，減輕負擔
+                        prev: { total: 0, a: 0, b: 0, c: 0 }
                     };
                 }
 
+                // 計算 A/B/C 的純數字總計 (依然使用原始 CSV 紀錄來計算佔比)
                 const valA = (row['A級'] || '').toString().toUpperCase();
                 const valB = (row['B級'] || '').toString().toUpperCase();
                 const valC = (row['C級'] || '').toString().toUpperCase();
-
                 const isA = valA.includes('V') || valA.includes('O') || valA.includes('1');
                 const isB = valB.includes('V') || valB.includes('O') || valB.includes('1');
                 const isC = valC.includes('V') || valC.includes('O') || valC.includes('1');
@@ -322,15 +323,17 @@ if (cityData[realGrade + '_issues'][issueName]) {
                 if (isB) targetBucket.b += 1;
                 if (isC) targetBucket.c += 1;
 
-                // 🌟 當前月份，進行異常敘述計數
+                // 🌟 4. 在這裡呼叫鑑定器！對每一個被打勾的問題強制重新分級
                 if (month === targetMonthStr) {
                     problemColumns.forEach(pCol => {
                         const cellVal = (row[pCol] || '').toString().toUpperCase();
-                        // 只要這格有填 V, O 或 1，就算作該異常發生
                         if (cellVal.includes('V') || cellVal.includes('O') || cellVal.includes('1')) {
-                            if (isA) targetBucket.probA[pCol] = (targetBucket.probA[pCol] || 0) + 1;
-                            if (isB) targetBucket.probB[pCol] = (targetBucket.probB[pCol] || 0) + 1;
-                            if (isC) targetBucket.probC[pCol] = (targetBucket.probC[pCol] || 0) + 1;
+                            
+                            let realGrade = autoGradeIssue(pCol); // 傳入欄位名稱(問題敘述)進行鑑定
+                            let targetProbObj = 'prob' + realGrade.toUpperCase(); // 決定放入 probA, probB 或 probC
+                            
+                            // 累加該問題的發生次數
+                            targetBucket[targetProbObj][pCol] = (targetBucket[targetProbObj][pCol] || 0) + 1;
                         }
                     });
                 }
@@ -340,7 +343,6 @@ if (cityData[realGrade + '_issues'][issueName]) {
         }
 
         function renderUI(stats, mCurrent, mPrev) {
-            // --- 1. 繪製原本的對齊數據表 ---
             let tableHtml = `
                 <table>
                     <thead>
@@ -383,8 +385,8 @@ if (cityData[realGrade + '_issues'][issueName]) {
                 return indexA - indexB;
             });
 
-            let problemsHtml = ''; // 用來裝載卡片的 HTML
-            const orderedStatsArray = []; // 用來產出最終 JSON
+            let problemsHtml = ''; 
+            const orderedStatsArray = []; 
 
             for (const reg of sortedRegions) {
                 const cur = stats[reg].current;
@@ -421,95 +423,36 @@ if (cityData[realGrade + '_issues'][issueName]) {
                     </tr>
                 `;
 
-                // 🌟 解析 Top 3 問題字串
-                const topA = getTopProblems(cur.probA);
-                const topB = getTopProblems(cur.probB);
-                const topC = getTopProblems(cur.probC);
+                // 🌟 5. 呼叫總結算引擎：算出這個縣市的 top_problems
+                const topProbs = generateFinalTopProblems(cur);
 
-                // 🌟 生成問題小卡
                 problemsHtml += `
                     <div class="problem-card">
                         <h4>📍 ${reg}</h4>
-                        <div class="prob-row"><span class="prob-label label-a">A級常見:</span><span class="prob-text">${topA}</span></div>
-                        <div class="prob-row"><span class="prob-label label-b">B級常見:</span><span class="prob-text">${topB}</span></div>
-                        <div class="prob-row"><span class="prob-label label-c">C級常見:</span><span class="prob-text">${topC}</span></div>
+                        <div class="prob-row"><span class="prob-label label-a">A級常見:</span><span class="prob-text">${topProbs.a}</span></div>
+                        <div class="prob-row"><span class="prob-label label-b">B級常見:</span><span class="prob-text">${topProbs.b}</span></div>
+                        <div class="prob-row"><span class="prob-label label-c">C級常見:</span><span class="prob-text">${topProbs.c}</span></div>
                     </div>
                 `;
 
-                // 將排序後的問題塞入最終 JSON，供未來前端直接取用
+                // 🌟 最終輸出的 JSON 格式，直接把不需要的 probA/B/C 丟掉，只留計算好的 top_problems
                 orderedStatsArray.push({ 
                     region: reg, 
                     current_month: {
-                        ...cur,
-                        top_problems: { a: topA, b: topB, c: topC }
+                        total: cur.total, a: cur.a, b: cur.b, c: cur.c,
+                        top_problems: topProbs
                     }, 
-                    prev_month: prv 
+                    prev_month: { total: prv.total, a: prv.a, b: prv.b, c: prv.c } 
                 });
             }
             
             tableHtml += `</tbody></table>`;
             document.getElementById('tableContainer').innerHTML = tableHtml;
 
-            // --- 2. 繪製異常敘述卡片區 ---
             document.getElementById('problemsContainer').style.display = 'block';
             document.getElementById('problemsGrid').innerHTML = problemsHtml;
 
-            // --- 3. 輸出含擴充屬性的 JSON ---
             document.getElementById('jsonOutput').value = JSON.stringify(orderedStatsArray, null, 4);
         }
-
-        // 🤖 自動分級鑑定器
-function autoGradeIssue(issueString) {
-    for (let rule of GRADING_RULES) {
-        for (let kw of rule.keywords) {
-            if (issueString.includes(kw)) {
-                return rule.grade; // 命中關鍵字，回傳 a, b, 或 c
-            }
-        }
-    }
-    // 如果都沒命中，預設丟到 C 級，並在 Console 印出警告讓你知道有「未知問題」
-    console.warn(`⚠️ 發現未知問題，已預設歸類為 C 級：${issueString}`);
-    return 'c'; 
-}
-
-        // 在匯出 JSON 前的最後處理階段：
-function generateFinalTopProblems(cityData) {
-    let top_problems = {};
-    
-    ['a', 'b', 'c'].forEach(grade => {
-        let issues = cityData[grade + '_issues'];
-        
-        if (issues && Object.keys(issues).length > 0) {
-            // 轉換為陣列並由大到小排序，取前三名
-            let sorted = Object.entries(issues)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 3);
-                
-            // 組合成 "問題(數量)、問題(數量)" 的完美格式
-            top_problems[grade] = sorted.map(p => `${p[0]}(${p[1]})`).join('、');
-        } else {
-            top_problems[grade] = "目前無具體問題紀錄";
-        }
-    });
-    
-    return top_problems;
-}
-
-// 最終產出的 JSON 結構就會長這樣，前端連算都不用算，直接印出來就好！
-/*
-{
-    "region": "雙北",
-    "current_month": {
-        "total": 820,
-        "a": 56, "b": 166, "c": 433,
-        "top_problems": {
-            "a": "前／後燈(行進車輪轉動中)(後燈)(14)、車鈴(無法發出鈴聲)(8)...",
-            "b": "車機機殼(髒污／塗鴉／小廣告／褪色)(37)...",
-            "c": "車體外觀(車架 掉漆)(90)..."
-        }
-    }
-}
-*/
-    </script>
 </body>
 </html>
