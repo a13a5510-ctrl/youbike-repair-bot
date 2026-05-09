@@ -192,6 +192,17 @@
             "一級檢修人員", "一級異常", "車輛異常", "一級維修異常", "總計"
         ];
 
+        const GRADING_RULES = [
+    // A級：重大問題 (安全) - 只要字串包含這些字，絕對是 A
+    { grade: 'a', keywords: ['滑落無法固定', '分離', '不亮', '無提示音', '無法發出鈴聲', '煞車失靈'] },
+    
+    // B級：重點問題 (觀感)
+    { grade: 'b', keywords: ['髒污', '塗鴉', '廣告', '褪色', '異音', '偏擺', '龜裂', '不順'] },
+    
+    // C級：一般問題 (內部管理)
+    { grade: 'c', keywords: ['垃圾', '貼紙', '掉漆', '鏽蝕', '泥除'] }
+];
+
         document.getElementById('csvFileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -427,6 +438,20 @@
             // --- 3. 輸出含擴充屬性的 JSON ---
             document.getElementById('jsonOutput').value = JSON.stringify(orderedStatsArray, null, 4);
         }
+
+        // 🤖 自動分級鑑定器
+function autoGradeIssue(issueString) {
+    for (let rule of GRADING_RULES) {
+        for (let kw of rule.keywords) {
+            if (issueString.includes(kw)) {
+                return rule.grade; // 命中關鍵字，回傳 a, b, 或 c
+            }
+        }
+    }
+    // 如果都沒命中，預設丟到 C 級，並在 Console 印出警告讓你知道有「未知問題」
+    console.warn(`⚠️ 發現未知問題，已預設歸類為 C 級：${issueString}`);
+    return 'c'; 
+}
     </script>
 </body>
 </html>
