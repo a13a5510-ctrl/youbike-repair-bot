@@ -179,7 +179,26 @@
     <script>
         let rawData = [];
         let problemColumns = []; // 用來存儲被判定為「異常問題」的欄位名稱
+        // 假設你原本讀到一個問題： let issueName = row['問題描述'];
+// 假設你原本讀到數量： let count = parseInt(row['數量']);
 
+// 1. 透過天網字典，強制鑑定它的真實級別！
+let realGrade = autoGradeIssue(issueName); 
+
+// 2. 將它存入對應縣市的 probA, probB 或 probC 陣列中
+if (!cityData[realGrade + '_issues']) {
+    cityData[realGrade + '_issues'] = {};
+}
+
+// 累加數量
+if (cityData[realGrade + '_issues'][issueName]) {
+    cityData[realGrade + '_issues'][issueName] += count;
+} else {
+    cityData[realGrade + '_issues'][issueName] = count;
+}
+
+
+        
         const targetRegionOrder = [
             "雙北", "桃園", "新竹", "苗栗", "台中", 
             "彰化", "雲林", "嘉義", "台南", "高雄", "屏東"
@@ -452,6 +471,45 @@ function autoGradeIssue(issueString) {
     console.warn(`⚠️ 發現未知問題，已預設歸類為 C 級：${issueString}`);
     return 'c'; 
 }
+
+        // 在匯出 JSON 前的最後處理階段：
+function generateFinalTopProblems(cityData) {
+    let top_problems = {};
+    
+    ['a', 'b', 'c'].forEach(grade => {
+        let issues = cityData[grade + '_issues'];
+        
+        if (issues && Object.keys(issues).length > 0) {
+            // 轉換為陣列並由大到小排序，取前三名
+            let sorted = Object.entries(issues)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3);
+                
+            // 組合成 "問題(數量)、問題(數量)" 的完美格式
+            top_problems[grade] = sorted.map(p => `${p[0]}(${p[1]})`).join('、');
+        } else {
+            top_problems[grade] = "目前無具體問題紀錄";
+        }
+    });
+    
+    return top_problems;
+}
+
+// 最終產出的 JSON 結構就會長這樣，前端連算都不用算，直接印出來就好！
+/*
+{
+    "region": "雙北",
+    "current_month": {
+        "total": 820,
+        "a": 56, "b": 166, "c": 433,
+        "top_problems": {
+            "a": "前／後燈(行進車輪轉動中)(後燈)(14)、車鈴(無法發出鈴聲)(8)...",
+            "b": "車機機殼(髒污／塗鴉／小廣告／褪色)(37)...",
+            "c": "車體外觀(車架 掉漆)(90)..."
+        }
+    }
+}
+*/
     </script>
 </body>
 </html>
