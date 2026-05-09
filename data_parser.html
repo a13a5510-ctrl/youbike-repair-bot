@@ -65,7 +65,6 @@
 
         button:hover { background-color: #0284c7; color: white;}
 
-        /* 🌟 新增按鈕專屬顏色 */
         .btn-success { background-color: var(--success-color); color: white; }
         .btn-success:hover { background-color: #059669; }
         
@@ -103,6 +102,21 @@
         .trend-down { color: var(--trend-down); font-weight: bold; }
         .trend-flat { color: var(--text-secondary); }
         .data-prev { color: var(--text-secondary); font-size: 0.9em; }
+
+        /* 🌟 新增：字典狀態追蹤面板 */
+        .dict-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .dict-container h3 { color: var(--accent-color); margin-top: 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; }
+        .dict-section { margin-bottom: 15px; }
+        .dict-section h4 { margin: 5px 0; color: var(--text-primary); }
+        .dict-section p { margin: 0 0 10px 0; color: var(--text-secondary); font-size: 0.95em; }
+        .dict-unknown { background: rgba(244, 63, 94, 0.1); border-left: 4px solid var(--danger-color); padding: 10px; border-radius: 4px; }
+        .dict-unknown h4, .dict-unknown p { color: var(--danger-color); }
 
         .problems-container {
             margin-top: 30px;
@@ -170,6 +184,8 @@
         <button onclick="processData()">▶ 執行趨勢與異常運算</button>
     </div>
 
+    <div id="dictContainer" class="dict-container" style="display: none;"></div>
+
     <div id="tableContainer"></div>
     
     <div id="problemsContainer" class="problems-container" style="display: none;">
@@ -191,28 +207,33 @@
 
     <script>
         let rawData = [];
-        let problemColumns = []; // 用來存儲被判定為「異常問題」的欄位名稱
+        let problemColumns = []; 
+
+        // 🌟 記錄有實際發生的問題分別被判定到哪一級
+        let problemDictionary = { a: new Set(), b: new Set(), c: new Set(), unknown: new Set() };
 
         const targetRegionOrder = [
             "雙北", "桃園", "新竹", "苗栗", "台中", 
             "彰化", "雲林", "嘉義", "台南", "高雄", "屏東"
         ];
 
-        // 非異常敘述的 Metadata 欄位，解析時會將其排除
         const metadataCols = [
             "地區", "月份", "A級", "B級", "C級", "編號", "公號", 
             "測驗日期", "城市", "車號", "車柱柱號", "一級檢修日期", 
             "一級檢修人員", "一級異常", "車輛異常", "一級維修異常", "總計"
         ];
 
-        // 天網字典
+        // 🌟 天網字典：找不到關鍵字的，現在會判定為 unknown
         const GRADING_RULES = [
+            // A級：重大問題 (安全)
             { grade: 'a', keywords: ['滑落無法固定', '分離', '不亮', '無提示音', '無法發出鈴聲', '煞車失靈', '變形'] },
+            // B級：重點問題 (觀感)
             { grade: 'b', keywords: ['髒污', '髒汙', '塗鴉', '廣告', '褪色', '異音', '偏擺', '龜裂', '不順', '搖晃', '歪斜'] },
+            // C級：一般問題 (內部管理)
             { grade: 'c', keywords: ['垃圾', '貼紙', '掉漆', '脫漆', '鏽蝕', '泥除'] }
         ];
 
-        // 自動分級鑑定器
+        // 🤖 自動分級鑑定器
         function autoGradeIssue(issueString) {
             for (let rule of GRADING_RULES) {
                 for (let kw of rule.keywords) {
@@ -221,7 +242,7 @@
                     }
                 }
             }
-            return 'c'; 
+            return 'unknown'; // 找不到不再塞給 C 級，而是回傳 unknown 警告
         }
 
         document.getElementById('csvFileInput').addEventListener('change', function(e) {
@@ -296,6 +317,9 @@
                 return;
             }
 
+            // 重置字典狀態
+            problemDictionary = { a: new Set(), b: new Set(), c: new Set(), unknown: new Set() };
+
             const targetMonthNum = parseInt(document.getElementById('monthFilter').value);
             const prevMonthNum = targetMonthNum === 1 ? 12 : targetMonthNum - 1;
             const targetMonthStr = targetMonthNum.toString();
@@ -312,7 +336,8 @@
 
                 if (!stats[region]) {
                     stats[region] = {
-                        current: { total: 0, a: 0, b: 0, c: 0, probA: {}, probB: {}, probC: {} },
+                        // 🌟 新增 probUnknown 來裝載未知問題
+                        current: { total: 0, a: 0, b: 0, c: 0, probA: {}, probB: {}, probC: {}, probUnknown: {} },
                         prev: { total: 0, a: 0, b: 0, c: 0 }
                     };
                 }
@@ -334,9 +359,15 @@
                 if (month === targetMonthStr) {
                     problemColumns.forEach(pCol => {
                         const cellVal = (row[pCol] || '').toString().toUpperCase();
+                        // 只有這個問題真的被打勾時，才去驗證它
                         if (cellVal.includes('V') || cellVal.includes('O') || cellVal.includes('1')) {
                             let realGrade = autoGradeIssue(pCol); 
-                            let targetProbObj = 'prob' + realGrade.toUpperCase(); 
+                            
+                            // 記錄到全域字典供畫面顯示
+                            problemDictionary[realGrade].add(pCol);
+
+                            // 如果是 unknown，先塞進 probUnknown 不參與 top_problems 計算
+                            let targetProbObj = realGrade === 'unknown' ? 'probUnknown' : 'prob' + realGrade.toUpperCase(); 
                             targetBucket[targetProbObj][pCol] = (targetBucket[targetProbObj][pCol] || 0) + 1;
                         }
                     });
@@ -347,6 +378,35 @@
         }
 
         function renderUI(stats, mCurrent, mPrev) {
+            
+            // --- 🌟 1. 渲染系統分級字典面板 ---
+            let dictHtml = `
+                <h3>📚 系統分級字典庫與未知問題捕捉</h3>
+                <p>以下為本次資料中「有實際發生過」的異常，系統將它們歸類的結果：</p>
+                <div class="dict-section">
+                    <h4>🟢 A級判定成功</h4>
+                    <p>${Array.from(problemDictionary.a).join('、') || '無'}</p>
+                </div>
+                <div class="dict-section">
+                    <h4>🟡 B級判定成功</h4>
+                    <p>${Array.from(problemDictionary.b).join('、') || '無'}</p>
+                </div>
+                <div class="dict-section">
+                    <h4>🟠 C級判定成功</h4>
+                    <p>${Array.from(problemDictionary.c).join('、') || '無'}</p>
+                </div>
+                <div class="dict-section dict-unknown">
+                    <h4>🚨 未能被判定的問題 (漏網之魚)</h4>
+                    <p style="font-weight: bold; font-size: 1.1em;">
+                        ${Array.from(problemDictionary.unknown).join('、') || '✨ 太棒了！所有發生的問題皆已成功配對分類 ✨'}
+                    </p>
+                    <p style="font-size: 0.85em; margin-top: 5px;">* 提示：如果上方出現紅字，代表該問題沒有出現在程式碼的 <code>GRADING_RULES</code> 關鍵字中。請複製關鍵字並補入程式碼後，重新點擊執行！(未能判定的問題將不會顯示在 JSON 的 Top3 中)</p>
+                </div>
+            `;
+            document.getElementById('dictContainer').innerHTML = dictHtml;
+            document.getElementById('dictContainer').style.display = 'block';
+
+            // --- 2. 渲染對齊表 ---
             let tableHtml = `
                 <table>
                     <thead>
@@ -454,20 +514,16 @@
             document.getElementById('problemsContainer').style.display = 'block';
             document.getElementById('problemsGrid').innerHTML = problemsHtml;
 
-            // 輸出給 sim_data.js 使用的標準格式
             const finalOutput = `const simJsonData = ${JSON.stringify(orderedStatsArray, null, 4)};`;
             document.getElementById('jsonOutput').value = finalOutput;
         }
 
-        // 🌟 魔法：一鍵複製
         function copyJson() {
             const jsonText = document.getElementById('jsonOutput').value;
             if (!jsonText) {
                 alert("⚠️ 請先載入 CSV 並點擊「執行趨勢與異常運算」！");
                 return;
             }
-            
-            // 由於安全性考量，使用最新的 clipboard API
             navigator.clipboard.writeText(jsonText).then(() => {
                 alert("✅ JSON 數據已成功複製！請直接去貼上覆蓋 sim_data.js 內容。");
             }).catch(err => {
@@ -476,7 +532,6 @@
             });
         }
 
-        // 🌟 魔法：一鍵下載
         function downloadJson() {
             const jsonText = document.getElementById('jsonOutput').value;
             if (!jsonText) {
