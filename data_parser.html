@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>數據對齊與趨勢引擎</title>
+    <title>數據對齊與趨勢引擎 (異常敘述偵測版)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         :root {
@@ -25,7 +25,7 @@
             background-color: var(--bg-color);
             color: var(--text-primary);
             padding: 20px;
-            max-width: 1600px; /* 為了容納完整對比欄位，大師把版面再加寬 */
+            max-width: 1600px;
             margin: 0 auto;
             line-height: 1.6;
         }
@@ -65,31 +65,28 @@
 
         button:hover { background-color: #0284c7; color: white;}
 
-        /* 表格究極排版 */
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
             background-color: var(--panel-bg);
-            font-size: 0.85em; /* 字體微調，讓資料一目了然 */
+            font-size: 0.85em; 
             text-align: center;
         }
 
         th, td {
             padding: 8px 4px;
             border: 1px solid var(--border-color);
-            white-space: nowrap; /* 防止欄位名稱折行 */
+            white-space: nowrap; 
         }
 
         th { background-color: #0f172a; color: var(--text-primary); font-weight: 600; }
         
-        /* 區塊顏色區分，視覺引導更清晰 */
         .group-total { background-color: rgba(56, 189, 248, 0.1); }
         .group-a { background-color: rgba(245, 158, 11, 0.05); }
         .group-b { background-color: rgba(245, 158, 11, 0.15); }
         .group-c { background-color: rgba(244, 63, 94, 0.15); }
         
-        /* 標題列高光 */
         th.group-total { border-top: 3px solid #38bdf8; color: #38bdf8;}
         th.group-a { border-top: 3px solid #fbbf24; color: #fbbf24;}
         th.group-b { border-top: 3px solid #f59e0b; color: #f59e0b;}
@@ -100,10 +97,47 @@
         .trend-flat { color: var(--text-secondary); }
         .data-prev { color: var(--text-secondary); font-size: 0.9em; }
 
-        .output-panel { margin-top: 20px; }
+        /* 🌟 大師新增：異常敘述卡片區塊樣式 */
+        .problems-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px dashed var(--border-color);
+        }
+        .problems-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .problem-card {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .problem-card h4 {
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+            font-size: 1.1em;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+        .prob-row {
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+        .prob-label { font-weight: bold; display: block; margin-bottom: 2px; }
+        .label-a { color: #fbbf24; }
+        .label-b { color: #f59e0b; }
+        .label-c { color: #f43f5e; }
+        .prob-text { color: var(--text-secondary); }
+
+        .output-panel { margin-top: 30px; }
         textarea {
             width: 100%;
-            height: 150px;
+            height: 200px;
             background-color: #0f172a;
             color: var(--success-color);
             border: 1px solid var(--border-color);
@@ -115,7 +149,7 @@
 </head>
 <body>
 
-    <h1>數據對齊與趨勢引擎</h1>
+    <h1>數據對齊與趨勢引擎 🚀 (含異常敘述擷取)</h1>
     
     <div class="control-panel">
         <div>
@@ -126,23 +160,36 @@
             <label>2. 目標月份 (本月): </label>
             <input type="number" id="monthFilter" value="3" min="1" max="12">
         </div>
-        <button onclick="processData()">▶ 執行趨勢運算</button>
+        <button onclick="processData()">▶ 執行趨勢與異常運算</button>
     </div>
 
     <div id="tableContainer"></div>
+    
+    <div id="problemsContainer" class="problems-container" style="display: none;">
+        <h3 style="color: var(--accent-color); margin-bottom: 5px;">🔍 本月各區主要異常敘述 (Top 3)</h3>
+        <p style="color: var(--text-secondary); font-size: 0.9em; margin-top: 0;">自動抓取 CSV 欄位，排除基本資料後進行排序</p>
+        <div id="problemsGrid" class="problems-grid"></div>
+    </div>
 
     <div class="output-panel">
-        <h3>📋 最終轉換 JSON</h3>
+        <h3>📋 最終轉換 JSON (已包含 Top Problems)</h3>
         <textarea id="jsonOutput" readonly></textarea>
     </div>
 
     <script>
         let rawData = [];
+        let problemColumns = []; // 用來存儲被判定為「異常問題」的欄位名稱
 
-        // 【大師秘笈】自訂縣市排序陣列
         const targetRegionOrder = [
             "雙北", "桃園", "新竹", "苗栗", "台中", 
             "彰化", "雲林", "嘉義", "台南", "高雄", "屏東"
+        ];
+
+        // 🌟 這些是非異常敘述的 Metadata 欄位，解析時會將其排除
+        const metadataCols = [
+            "地區", "月份", "A級", "B級", "C級", "編號", "公號", 
+            "測驗日期", "城市", "車號", "車柱柱號", "一級檢修日期", 
+            "一級檢修人員", "一級異常", "車輛異常", "一級維修異常", "總計"
         ];
 
         document.getElementById('csvFileInput').addEventListener('change', function(e) {
@@ -160,7 +207,7 @@
                     for (let i = 0; i < allRows.length; i++) {
                         if (allRows[i].includes('地區') && allRows[i].includes('月份')) {
                             headerIndex = i;
-                            headers = allRows[i];
+                            headers = allRows[i].map(h => h ? h.trim() : '');
                             break;
                         }
                     }
@@ -170,30 +217,37 @@
                         return;
                     }
 
+                    // 🌟 動態判斷：哪些欄位是「問題敘述」？
+                    problemColumns = headers.filter(h => h && !metadataCols.includes(h));
+
                     rawData = [];
                     for (let i = headerIndex + 1; i < allRows.length; i++) {
                         let rowObj = {};
                         for (let j = 0; j < headers.length; j++) {
-                            const key = headers[j] ? headers[j].trim() : `未命名欄位_${j}`;
+                            const key = headers[j] || `未命名欄位_${j}`;
                             rowObj[key] = allRows[i][j];
                         }
                         rawData.push(rowObj);
                     }
-                    alert(`✅ CSV 解析成功！請點擊「執行趨勢運算」。`);
+                    alert(`✅ CSV 解析成功！共掃描到 ${problemColumns.length} 種異常項目。請點擊「執行趨勢與異常運算」。`);
                 }
             });
         });
 
-        // 趨勢計算兵器 (自動處理數值與百分比)
         function getTrend(current, prev, isPercent = false) {
             const diff = current - prev;
             if (diff === 0) return `<span class="trend-flat">-</span>`;
-            
             const sign = diff > 0 ? "+" : "";
             const valStr = isPercent ? diff.toFixed(1) + "%" : diff;
-            
             if (diff > 0) return `<span class="trend-up">${sign}${valStr}</span>`;
             return `<span class="trend-down">${valStr}</span>`;
+        }
+
+        // 🌟 排序並取得 Top N 的輔助函式
+        function getTopProblems(probObj, limit = 3) {
+            let sorted = Object.entries(probObj).sort((a, b) => b[1] - a[1]);
+            if (sorted.length === 0) return "無異常紀錄";
+            return sorted.slice(0, limit).map(item => `${item[0]}(${item[1]})`).join('、');
         }
 
         function processData() {
@@ -218,8 +272,8 @@
 
                 if (!stats[region]) {
                     stats[region] = {
-                        current: { total: 0, a: 0, b: 0, c: 0 },
-                        prev: { total: 0, a: 0, b: 0, c: 0 }
+                        current: { total: 0, a: 0, b: 0, c: 0, probA: {}, probB: {}, probC: {} },
+                        prev: { total: 0, a: 0, b: 0, c: 0 } // 上個月暫時不抓明細，減輕負擔
                     };
                 }
 
@@ -237,13 +291,26 @@
                 if (isA) targetBucket.a += 1;
                 if (isB) targetBucket.b += 1;
                 if (isC) targetBucket.c += 1;
+
+                // 🌟 當前月份，進行異常敘述計數
+                if (month === targetMonthStr) {
+                    problemColumns.forEach(pCol => {
+                        const cellVal = (row[pCol] || '').toString().toUpperCase();
+                        // 只要這格有填 V, O 或 1，就算作該異常發生
+                        if (cellVal.includes('V') || cellVal.includes('O') || cellVal.includes('1')) {
+                            if (isA) targetBucket.probA[pCol] = (targetBucket.probA[pCol] || 0) + 1;
+                            if (isB) targetBucket.probB[pCol] = (targetBucket.probB[pCol] || 0) + 1;
+                            if (isC) targetBucket.probC[pCol] = (targetBucket.probC[pCol] || 0) + 1;
+                        }
+                    });
+                }
             });
 
             renderUI(stats, targetMonthNum, prevMonthNum);
         }
 
         function renderUI(stats, mCurrent, mPrev) {
-            // 【大師排版陣法】完全比照企業標準報表結構，數量與佔比並行
+            // --- 1. 繪製原本的對齊數據表 ---
             let tableHtml = `
                 <table>
                     <thead>
@@ -286,24 +353,23 @@
                 return indexA - indexB;
             });
 
+            let problemsHtml = ''; // 用來裝載卡片的 HTML
+            const orderedStatsArray = []; // 用來產出最終 JSON
+
             for (const reg of sortedRegions) {
                 const cur = stats[reg].current;
                 const prv = stats[reg].prev;
 
-                // 佔比計算
                 const curRA = cur.total > 0 ? (cur.a / cur.total * 100) : 0;
                 const prvRA = prv.total > 0 ? (prv.a / prv.total * 100) : 0;
-                
                 const curRB = cur.total > 0 ? (cur.b / cur.total * 100) : 0;
                 const prvRB = prv.total > 0 ? (prv.b / prv.total * 100) : 0;
-                
                 const curRC = cur.total > 0 ? (cur.c / cur.total * 100) : 0;
                 const prvRC = prv.total > 0 ? (prv.c / prv.total * 100) : 0;
 
                 tableHtml += `
                     <tr>
                         <td style="font-weight:bold;">${reg}</td>
-                        
                         <td class="group-total">${cur.total.toLocaleString()}</td>
                         <td class="group-total data-prev">${prv.total.toLocaleString()}</td>
                         <td class="group-total">${getTrend(cur.total, prv.total, false)}</td>
@@ -324,13 +390,41 @@
                         <td class="group-c">${getTrend(curRC, prvRC, true)}</td>
                     </tr>
                 `;
+
+                // 🌟 解析 Top 3 問題字串
+                const topA = getTopProblems(cur.probA);
+                const topB = getTopProblems(cur.probB);
+                const topC = getTopProblems(cur.probC);
+
+                // 🌟 生成問題小卡
+                problemsHtml += `
+                    <div class="problem-card">
+                        <h4>📍 ${reg}</h4>
+                        <div class="prob-row"><span class="prob-label label-a">A級常見:</span><span class="prob-text">${topA}</span></div>
+                        <div class="prob-row"><span class="prob-label label-b">B級常見:</span><span class="prob-text">${topB}</span></div>
+                        <div class="prob-row"><span class="prob-label label-c">C級常見:</span><span class="prob-text">${topC}</span></div>
+                    </div>
+                `;
+
+                // 將排序後的問題塞入最終 JSON，供未來前端直接取用
+                orderedStatsArray.push({ 
+                    region: reg, 
+                    current_month: {
+                        ...cur,
+                        top_problems: { a: topA, b: topB, c: topC }
+                    }, 
+                    prev_month: prv 
+                });
             }
+            
             tableHtml += `</tbody></table>`;
             document.getElementById('tableContainer').innerHTML = tableHtml;
 
-            const orderedStatsArray = sortedRegions.map(reg => {
-                return { region: reg, current_month: stats[reg].current, prev_month: stats[reg].prev };
-            });
+            // --- 2. 繪製異常敘述卡片區 ---
+            document.getElementById('problemsContainer').style.display = 'block';
+            document.getElementById('problemsGrid').innerHTML = problemsHtml;
+
+            // --- 3. 輸出含擴充屬性的 JSON ---
             document.getElementById('jsonOutput').value = JSON.stringify(orderedStatsArray, null, 4);
         }
     </script>
