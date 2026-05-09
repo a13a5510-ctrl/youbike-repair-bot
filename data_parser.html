@@ -65,6 +65,13 @@
 
         button:hover { background-color: #0284c7; color: white;}
 
+        /* 🌟 新增按鈕專屬顏色 */
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-success:hover { background-color: #059669; }
+        
+        .btn-primary { background-color: #3b82f6; color: white; }
+        .btn-primary:hover { background-color: #2563eb; }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -97,7 +104,6 @@
         .trend-flat { color: var(--text-secondary); }
         .data-prev { color: var(--text-secondary); font-size: 0.9em; }
 
-        /* 🌟 大師新增：異常敘述卡片區塊樣式 */
         .problems-container {
             margin-top: 30px;
             padding-top: 20px;
@@ -135,6 +141,7 @@
         .prob-text { color: var(--text-secondary); }
 
         .output-panel { margin-top: 30px; }
+        .output-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         textarea {
             width: 100%;
             height: 200px;
@@ -158,7 +165,7 @@
         </div>
         <div>
             <label>2. 目標月份 (本月): </label>
-            <input type="number" id="monthFilter" value="3" min="1" max="12">
+            <input type="number" id="monthFilter" value="4" min="1" max="12">
         </div>
         <button onclick="processData()">▶ 執行趨勢與異常運算</button>
     </div>
@@ -172,11 +179,18 @@
     </div>
 
     <div class="output-panel">
-        <h3>📋 最終轉換 JSON (已包含 Top Problems)</h3>
+        <div class="output-header">
+            <h3 style="margin: 0;">📋 最終轉換 JSON (請複製到 sim_data.js)</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-success" onclick="copyJson()">📋 一鍵複製 JSON</button>
+                <button class="btn-primary" onclick="downloadJson()">⬇️ 下載 JSON 檔案</button>
+            </div>
+        </div>
         <textarea id="jsonOutput" readonly></textarea>
     </div>
-<script>
-    let rawData = [];
+
+    <script>
+        let rawData = [];
         let problemColumns = []; // 用來存儲被判定為「異常問題」的欄位名稱
 
         const targetRegionOrder = [
@@ -184,33 +198,30 @@
             "彰化", "雲林", "嘉義", "台南", "高雄", "屏東"
         ];
 
-        // 🌟 這些是非異常敘述的 Metadata 欄位，解析時會將其排除
+        // 非異常敘述的 Metadata 欄位，解析時會將其排除
         const metadataCols = [
             "地區", "月份", "A級", "B級", "C級", "編號", "公號", 
             "測驗日期", "城市", "車號", "車柱柱號", "一級檢修日期", 
             "一級檢修人員", "一級異常", "車輛異常", "一級維修異常", "總計"
         ];
 
-        // 🌟 1. 天網字典：放置於最上方，只初始化一次
+        // 天網字典
         const GRADING_RULES = [
-            // A級：重大問題 (安全)
             { grade: 'a', keywords: ['滑落無法固定', '分離', '不亮', '無提示音', '無法發出鈴聲', '煞車失靈', '變形'] },
-            // B級：重點問題 (觀感)
             { grade: 'b', keywords: ['髒污', '髒汙', '塗鴉', '廣告', '褪色', '異音', '偏擺', '龜裂', '不順', '搖晃', '歪斜'] },
-            // C級：一般問題 (內部管理)
             { grade: 'c', keywords: ['垃圾', '貼紙', '掉漆', '脫漆', '鏽蝕', '泥除'] }
         ];
 
-        // 🤖 2. 自動分級鑑定器
+        // 自動分級鑑定器
         function autoGradeIssue(issueString) {
             for (let rule of GRADING_RULES) {
                 for (let kw of rule.keywords) {
                     if (issueString.includes(kw)) {
-                        return rule.grade; // 命中關鍵字，回傳 a, b, 或 c
+                        return rule.grade; 
                     }
                 }
             }
-            return 'c'; // 預設歸類為 C 級
+            return 'c'; 
         }
 
         document.getElementById('csvFileInput').addEventListener('change', function(e) {
@@ -238,7 +249,6 @@
                         return;
                     }
 
-                    // 找出所有的問題敘述欄位
                     problemColumns = headers.filter(h => h && !metadataCols.includes(h));
 
                     rawData = [];
@@ -264,15 +274,14 @@
             return `<span class="trend-down">${valStr}</span>`;
         }
 
-        // 🤖 3. 自動排序與前三名產出引擎 (取代舊的 getTopProblems)
         function generateFinalTopProblems(cityCurrentData) {
             let top_problems = {};
             ['a', 'b', 'c'].forEach(grade => {
-                let issues = cityCurrentData['prob' + grade.toUpperCase()]; // 抓取 probA, probB, probC
+                let issues = cityCurrentData['prob' + grade.toUpperCase()]; 
                 if (issues && Object.keys(issues).length > 0) {
                     let sorted = Object.entries(issues)
-                        .sort((a, b) => b[1] - a[1]) // 由大到小排序
-                        .slice(0, 3); // 取前三名
+                        .sort((a, b) => b[1] - a[1]) 
+                        .slice(0, 3); 
                     top_problems[grade] = sorted.map(p => `${p[0]}(${p[1]})`).join('、');
                 } else {
                     top_problems[grade] = "目前無具體問題紀錄";
@@ -308,7 +317,6 @@
                     };
                 }
 
-                // 計算 A/B/C 的純數字總計 (依然使用原始 CSV 紀錄來計算佔比)
                 const valA = (row['A級'] || '').toString().toUpperCase();
                 const valB = (row['B級'] || '').toString().toUpperCase();
                 const valC = (row['C級'] || '').toString().toUpperCase();
@@ -323,16 +331,12 @@
                 if (isB) targetBucket.b += 1;
                 if (isC) targetBucket.c += 1;
 
-                // 🌟 4. 在這裡呼叫鑑定器！對每一個被打勾的問題強制重新分級
                 if (month === targetMonthStr) {
                     problemColumns.forEach(pCol => {
                         const cellVal = (row[pCol] || '').toString().toUpperCase();
                         if (cellVal.includes('V') || cellVal.includes('O') || cellVal.includes('1')) {
-                            
-                            let realGrade = autoGradeIssue(pCol); // 傳入欄位名稱(問題敘述)進行鑑定
-                            let targetProbObj = 'prob' + realGrade.toUpperCase(); // 決定放入 probA, probB 或 probC
-                            
-                            // 累加該問題的發生次數
+                            let realGrade = autoGradeIssue(pCol); 
+                            let targetProbObj = 'prob' + realGrade.toUpperCase(); 
                             targetBucket[targetProbObj][pCol] = (targetBucket[targetProbObj][pCol] || 0) + 1;
                         }
                     });
@@ -423,7 +427,6 @@
                     </tr>
                 `;
 
-                // 🌟 5. 呼叫總結算引擎：算出這個縣市的 top_problems
                 const topProbs = generateFinalTopProblems(cur);
 
                 problemsHtml += `
@@ -435,7 +438,6 @@
                     </div>
                 `;
 
-                // 🌟 最終輸出的 JSON 格式，直接把不需要的 probA/B/C 丟掉，只留計算好的 top_problems
                 orderedStatsArray.push({ 
                     region: reg, 
                     current_month: {
@@ -452,7 +454,49 @@
             document.getElementById('problemsContainer').style.display = 'block';
             document.getElementById('problemsGrid').innerHTML = problemsHtml;
 
-            document.getElementById('jsonOutput').value = JSON.stringify(orderedStatsArray, null, 4);
+            // 輸出給 sim_data.js 使用的標準格式
+            const finalOutput = `const simJsonData = ${JSON.stringify(orderedStatsArray, null, 4)};`;
+            document.getElementById('jsonOutput').value = finalOutput;
+        }
+
+        // 🌟 魔法：一鍵複製
+        function copyJson() {
+            const jsonText = document.getElementById('jsonOutput').value;
+            if (!jsonText) {
+                alert("⚠️ 請先載入 CSV 並點擊「執行趨勢與異常運算」！");
+                return;
+            }
+            
+            // 由於安全性考量，使用最新的 clipboard API
+            navigator.clipboard.writeText(jsonText).then(() => {
+                alert("✅ JSON 數據已成功複製！請直接去貼上覆蓋 sim_data.js 內容。");
+            }).catch(err => {
+                console.error('複製失敗:', err);
+                alert("❌ 複製失敗，請手動在框內全選並複製 (Ctrl+C)。");
+            });
+        }
+
+        // 🌟 魔法：一鍵下載
+        function downloadJson() {
+            const jsonText = document.getElementById('jsonOutput').value;
+            if (!jsonText) {
+                alert("⚠️ 請先載入 CSV 並點擊「執行趨勢與異常運算」！");
+                return;
+            }
+
+            const month = document.getElementById('monthFilter').value;
+            const fileName = `本月模擬體驗數據_${month}月.js`;
+
+            const blob = new Blob([jsonText], { type: "text/javascript;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
