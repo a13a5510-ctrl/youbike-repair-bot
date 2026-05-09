@@ -175,7 +175,7 @@
         <h3>📋 最終轉換 JSON (已包含 Top Problems)</h3>
         <textarea id="jsonOutput" readonly></textarea>
     </div>
-
+<script>
     let rawData = [];
         let problemColumns = []; // 用來存儲被判定為「異常問題」的欄位名稱
 
@@ -454,5 +454,6 @@
 
             document.getElementById('jsonOutput').value = JSON.stringify(orderedStatsArray, null, 4);
         }
+    </script>
 </body>
 </html>
