@@ -6,6 +6,8 @@ let showingFleetDetails = false;
 let showingSimDetails = false;
 let isDataView = false; 
 let showVariance = false; 
+let isPresentationMode = false; // 🌟 修復 1：補回投影模式狀態變數
+let isLaserMode = false;        // 🌟 修復 1：補回雷射筆狀態變數
 
 let currentStatsMetric = 'station';
 let currentMaintenanceMetric = 'maintenance_rate';
@@ -55,12 +57,15 @@ function renderSubButtons() {
     metrics.forEach((metric) => {
         const btn = document.createElement('button');
         btn.innerText = metric.label;
+        btn.dataset.key = metric.key; // 🌟 綁定資料密鑰，供表格標題點擊時「隔空呼叫」使用
+        
         let isActive = (currentStatsMetric === metric.key && currentMode === 'stats') || (currentMaintenanceMetric === metric.key && currentMode === 'maintenance') || (currentSimulationMetric === metric.key && currentMode === 'simulation');
         if (isActive) btn.classList.add('active');
 
         btn.addEventListener('click', () => {
-            // 🌟 防呆優化：如果點擊的已經是當前正在顯示的按鈕，就直接 return 不做事，避免浪費效能重複繪製！
-            if (btn.classList.contains('active')) return;
+            // 防呆優化：如果點擊的已經是當前正在顯示的按鈕，就直接 return
+            if (btn.classList.contains('active') && !isDataView) return; 
+
             document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
@@ -76,27 +81,35 @@ function renderSubButtons() {
             toggleDataView();
             if (isDataView) renderDataView(); 
             
-            // 🌟 智慧防呆：點擊「補充說明」時，若地圖為滿版左側，則流暢滑向右側
             if (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info') {
-                if (layoutState === 'left') { 
-                    layoutState = 'right'; 
-                }
+                if (layoutState === 'left') { layoutState = 'right'; }
                 document.getElementById('barChart').classList.add('hidden');
                 document.getElementById('varianceToggleBtn').classList.add('hidden');
                 document.getElementById('maintenance-info-area').classList.remove('hidden');
             } else {
                 document.getElementById('barChart').classList.remove('hidden');
                 document.getElementById('maintenance-info-area').classList.add('hidden');
+                setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
                 updateBarChart(); 
                 updateMapTheme();
             }
 
-            // 觸發全新的絲滑佈局引擎
             applyLayoutState();
         });
         btnContainer.appendChild(btn);
     });
 }
+
+// 🌟 修復 2：表格標題點擊時的「隔空點穴」連動函數
+window.triggerSubMetric = function(key) {
+    const btns = document.querySelectorAll('.controls button');
+    for (let b of btns) {
+        if (b.dataset.key === key) {
+            b.click(); // 模擬點擊膠囊按鈕，完美觸發所有更新機制
+            break;
+        }
+    }
+};
 
 // 導覽列與模式切換
 document.getElementById('nav-stats').addEventListener('click', (e) => switchMode('stats', e.target));
@@ -116,6 +129,7 @@ function switchMode(mode, targetElement) {
     const simMetricsArea = document.getElementById('simulation-metrics-area');
     const detailPanel = document.getElementById('cityDetailPanel');
     const infoArea = document.getElementById('maintenance-info-area');
+    const dashboard = document.getElementById('main-dashboard');
     const floatingStats = document.getElementById('floating-stats-area');
 
     maintMetricsArea.classList.add('hidden');
@@ -137,7 +151,6 @@ function switchMode(mode, targetElement) {
     updateMapTheme(); 
     toggleDataView();
     
-    // 觸發佈局
     applyLayoutState();
     
     if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
@@ -145,7 +158,6 @@ function switchMode(mode, targetElement) {
     }
 }
 
-// 🌟 升級版：三段佈局絲滑切換引擎
 let layoutState = 'split';
 document.getElementById('layoutToggleBtn').addEventListener('click', () => {
     if (layoutState === 'split') layoutState = 'left';
@@ -156,28 +168,35 @@ document.getElementById('layoutToggleBtn').addEventListener('click', () => {
 
 function applyLayoutState() {
     const dashboard = document.getElementById('main-dashboard');
+    const left = document.getElementById('map-panel-container');
+    const right = document.getElementById('right-chart-panel');
     const btn = document.getElementById('layoutToggleBtn');
     
-    if (!btn || !dashboard) return;
+    if (!btn || !dashboard || !left || !right) return;
 
-    // 清除舊版的硬核 display 設定，全部交由 CSS 的 class 去處理滑動
-    document.getElementById('map-panel-container').style.display = '';
-    document.getElementById('right-chart-panel').style.display = '';
-
-    // 首頁強制隱藏按鈕，並設為左滿版
     if (currentMode === 'stats' && currentStatsMetric === '') {
         btn.style.display = 'none'; 
+        left.style.display = 'flex'; left.style.flex = '1';
+        right.style.display = 'none'; right.style.flex = '0';
         dashboard.className = 'dashboard layout-left';
     } else {
         btn.style.display = 'inline-block';
         dashboard.className = `dashboard layout-${layoutState}`;
-        if (layoutState === 'split') { btn.innerText = '🔀 雙拼視圖'; }
-        else if (layoutState === 'left') { btn.innerText = '🗺️ 滿版左區'; }
-        else if (layoutState === 'right') { btn.innerText = '📊 滿版右區'; }
+        if (layoutState === 'split') { 
+            left.style.display = 'flex'; left.style.flex = '1';
+            right.style.display = 'flex'; right.style.flex = '1';
+            btn.innerText = '🔀 雙拼視圖'; 
+        } else if (layoutState === 'left') { 
+            left.style.display = 'flex'; left.style.flex = '1';
+            right.style.display = 'none'; right.style.flex = '0';
+            btn.innerText = '🗺️ 滿版左區'; 
+        } else if (layoutState === 'right') { 
+            left.style.display = 'none'; left.style.flex = '0';
+            right.style.display = 'flex'; right.style.flex = '1';
+            btn.innerText = '📊 滿版右區'; 
+        }
     }
 
-    // 🌟 神級魔法：高幀率圖表重繪 (High-FPS Resize)
-    // 讓 ECharts 在面板「滑動」的 450 毫秒期間，以每秒 60 幀的速度動態調整大小，確保縮放過程無比流暢！
     let startTime = Date.now();
     function smoothResize() {
         if(mapChart) mapChart.resize(); 
@@ -189,7 +208,6 @@ function applyLayoutState() {
     requestAnimationFrame(smoothResize);
 }
 
-// 數據切換與高亮
 document.getElementById('mapDataToggleBtn').addEventListener('click', () => { isDataView = !isDataView; toggleDataView(); });
 
 const varianceToggleBtn = document.getElementById('varianceToggleBtn');
@@ -266,7 +284,14 @@ window.handleRowDblClick = function(region) {
 
         if (item && item.top_problems && item.top_problems[grade]) {
             document.getElementById('simModalTitle').innerHTML = `${region} <span style="color:${gColor}; font-size:18px;">[${grade.toUpperCase()}級: ${gDesc}]</span>`;
-            let probs = item.top_problems[grade].split(/(?<=\))、/).map(p => `<li style="border-left: 5px solid ${gColor};">${p}</li>`).join('');
+            
+            // 安全斷句切割
+            let probsArray = item.top_problems[grade].split(')、');
+            let probs = probsArray.map((p, index) => {
+                let text = index === probsArray.length - 1 ? p : p + ')';
+                return `<li style="border-left: 5px solid ${gColor};">${text}</li>`;
+            }).join('');
+
             document.getElementById('simModalBody').innerHTML = `<ul>${probs}</ul>`;
             document.getElementById('simModal').classList.remove('hidden');
         } else {
@@ -302,21 +327,31 @@ document.getElementById('fontSizeSlider').addEventListener('input', (e) => {
 
 // 投影模式
 const presentationBtn = document.getElementById('presentationToggleBtn');
-presentationBtn.addEventListener('click', async () => {
-    isPresentationMode = !isPresentationMode;
-    if (isPresentationMode) { if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen().catch(() => {}); presentationBtn.classList.add('active'); presentationBtn.innerText = '🖥️ 退出投影'; adjustZoom(2.0); }
-    else { if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen(); presentationBtn.classList.remove('active'); presentationBtn.innerText = '📺 投影模式'; adjustZoom(1); }
-    setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150);
-});
+if (presentationBtn) {
+    presentationBtn.addEventListener('click', async () => {
+        isPresentationMode = !isPresentationMode;
+        if (isPresentationMode) { 
+            if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen().catch(() => {}); 
+            presentationBtn.classList.add('active'); presentationBtn.innerText = '🖥️ 退出投影'; adjustZoom(2.0); 
+        } else { 
+            if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen(); 
+            presentationBtn.classList.remove('active'); presentationBtn.innerText = '📺 投影模式'; adjustZoom(1); 
+        }
+        setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150);
+    });
+}
 
 // 雷射筆
 const laserDot = document.getElementById('laser-dot');
-document.getElementById('laserToggleBtn').addEventListener('click', (e) => {
-    isLaserMode = !isLaserMode; document.body.classList.toggle('laser-active', isLaserMode);
-    if (isLaserMode) { e.target.classList.add('active'); e.target.innerText = '❌ 關閉雷射'; laserDot.classList.add('active'); }
-    else { e.target.classList.remove('active'); e.target.innerText = '🔴 雷射筆'; laserDot.classList.remove('active'); }
-});
-document.addEventListener('mousemove', (e) => { if (isLaserMode) laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`; });
+const laserToggleBtn = document.getElementById('laserToggleBtn');
+if (laserToggleBtn && laserDot) {
+    laserToggleBtn.addEventListener('click', (e) => {
+        isLaserMode = !isLaserMode; document.body.classList.toggle('laser-active', isLaserMode);
+        if (isLaserMode) { e.target.classList.add('active'); e.target.innerText = '❌ 關閉雷射'; laserDot.classList.add('active'); }
+        else { e.target.classList.remove('active'); e.target.innerText = '🔴 雷射筆'; laserDot.classList.remove('active'); }
+    });
+    document.addEventListener('mousemove', (e) => { if (isLaserMode) laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`; });
+}
 
 // ECharts 核心函數
 function getMapValue(item) {
@@ -360,6 +395,7 @@ function updateBarChart() {
     barChart.setOption({ title: { text: ct + (showVariance ? ' - 較上月變動' : ' - 本月數值'), left: 'center', textStyle: { color: t, fontSize: 15 * globalFontScale } }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: t }, formatter: (p) => { let h = `<div style="font-weight:bold;margin-bottom:5px;">${p[0].axisValue}</div>`; p.forEach(x => { h += `${x.marker} ${x.seriesName}: <b style="color:${x.color}">${(x.value > 0 && showVariance ? '+' : '')}${x.value}${ip ? '%' : ''}</b><br/>`; }); return h; } }, legend: { show: !showVariance, data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: t, fontSize: 12 * globalFontScale } }, grid: { left: '3%', right: '8%', bottom: '15%', top: '15%', containLabel: true }, xAxis: { type: 'category', data: rs, axisLabel: { color: t, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: g } } }, yAxis: { type: 'value', min: (v) => (ip && !showVariance) ? Math.max(0, Math.floor(v.min - 5)) : null, axisLabel: { color: t, formatter: ip ? '{value} %' : '{value}', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: g, type: 'dashed' } } }, series: sc }, true);
 }
 
+// 🌟 新增：透過表格標題點擊呼叫對應的圖表與按鈕更新
 function renderDataView() {
     const container = document.getElementById('data-view-container');
     let title = document.querySelector('.top-nav button.active').innerText;
@@ -370,13 +406,14 @@ function renderDataView() {
     }
     
     html += '<table class="clean-data-table"><thead><tr>';
-
     const trStr = (r) => `<tr id="row-${r.region}" onclick="highlightRow('${r.region}')" ondblclick="handleRowDblClick('${r.region}')">`;
 
+    // 🌟 在這裡將 `<th>` 加上 onclick 事件與 clickable-th 類別
     if (currentMode === 'stats') {
-        let cl = (key) => currentStatsMetric === key ? 'class="active-col"' : '';
-        html += `<th>縣市</th><th>綜合分數</th><th ${cl('station')}>場站妥善度</th><th ${cl('appearance')}>外觀標示</th><th ${cl('functionality')}>重要機能</th><th ${cl('ems')}>EMS維護率</th><th ${cl('operability')}>可動率</th></tr></thead><tbody>`;
+        let th = (key, label) => `<th class="${currentStatsMetric === key ? 'active-col' : 'clickable-th'}" onclick="triggerSubMetric('${key}')">${label}</th>`;
+        html += `<th>縣市</th><th>綜合分數</th>${th('station', '場站妥善度')}${th('appearance', '外觀標示')}${th('functionality', '重要機能')}${th('ems', 'EMS維護率')}${th('operability', '可動率')}</tr></thead><tbody>`;
         rawData.forEach(r => {
+            let cl = (key) => currentStatsMetric === key ? 'class="active-col"' : '';
             html += `${trStr(r)}<td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
                 <td style="color:var(--accent-color);font-weight:bold;">${r.overall} 分</td>
                 <td ${cl('station')}>${r.station} 分</td><td ${cl('appearance')}>${r.appearance} 分</td>
@@ -404,101 +441,32 @@ function renderDataView() {
                 <td style="color:${varColor};font-weight:bold;">${varianceSign}${variance}%</td></tr>`;
         });
     } else if (currentMode === 'maintenance') {
-        let clAcc = currentMaintenanceMetric === 'm_accident' ? 'class="active-col"' : '';
-        let clRec = currentMaintenanceMetric === 'm_records' ? 'class="active-col"' : '';
-        let clRate = currentMaintenanceMetric === 'maintenance_rate' ? 'class="active-col"' : '';
-        html += `<th>縣市</th><th>總營運車輛</th><th ${clAcc}>事故車輛數</th><th ${clRec}>維護記錄數</th><th ${clRate}>一級維護率</th><th>較上月變動</th></tr></thead><tbody>`;
+        let th = (key, label) => `<th class="${currentMaintenanceMetric === key ? 'active-col' : 'clickable-th'}" onclick="triggerSubMetric('${key}')">${label}</th>`;
+        html += `<th>縣市</th><th>總營運車輛</th>${th('m_accident', '事故車輛數')}${th('m_records', '維護記錄數')}${th('maintenance_rate', '一級維護率')}<th>較上月變動</th></tr></thead><tbody>`;
         rawData.forEach(r => {
+            let cl = (key) => currentMaintenanceMetric === key ? 'class="active-col"' : '';
             let varColor = r.m_var.includes('-') ? 'var(--danger-color)' : 'var(--safe-color)';
             html += `${trStr(r)}<td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
-                <td>${r.m_fleet.toLocaleString()}</td><td ${clAcc} style="color:var(--danger-color);font-weight:bold;">${r.m_accident}</td>
-                <td ${clRec}>${r.m_records.toLocaleString()}</td><td ${clRate} style="color:var(--accent-color);font-weight:bold;">${r.maintenance_rate}%</td>
+                <td>${r.m_fleet.toLocaleString()}</td><td ${cl('m_accident')} style="color:var(--danger-color);font-weight:bold;">${r.m_accident}</td>
+                <td ${cl('m_records')}>${r.m_records.toLocaleString()}</td><td ${cl('maintenance_rate')} style="color:var(--accent-color);font-weight:bold;">${r.maintenance_rate}%</td>
                 <td style="color:${varColor};font-weight:bold;">${r.m_var}</td></tr>`;
         });
     } else if (currentMode === 'simulation') {
-        let clA = currentSimulationMetric === 'sim_a' ? 'class="active-col"' : '';
-        let clB = currentSimulationMetric === 'sim_b' ? 'class="active-col"' : '';
-        let clC = currentSimulationMetric === 'sim_c' ? 'class="active-col"' : '';
-        html += `<th>縣市</th><th ${clA}>A級異常</th><th ${clB}>B級異常</th><th ${clC}>C級異常</th></tr></thead><tbody>`;
+        let th = (key, label) => `<th class="${currentSimulationMetric === key ? 'active-col' : 'clickable-th'}" onclick="triggerSubMetric('${key}')">${label}</th>`;
+        html += `<th>縣市</th>${th('sim_a', 'A級異常')}${th('sim_b', 'B級異常')}${th('sim_c', 'C級異常')}</tr></thead><tbody>`;
         rawData.forEach(r => {
+            let cl = (key) => currentSimulationMetric === key ? 'class="active-col"' : '';
             let aColor = r.sim_a_ratio > 5.0 ? 'var(--danger-color)' : 'var(--text-primary)';
             let bColor = r.sim_b_ratio > 20.0 ? 'var(--danger-color)' : 'var(--text-primary)';
             let cColor = r.sim_c_ratio > 50.0 ? 'var(--danger-color)' : 'var(--text-primary)';
             html += `${trStr(r)}<td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
-                <td ${clA} style="color:${aColor};font-weight:bold;">${r.sim_a_count} 輛 (${r.sim_a_ratio}%)</td>
-                <td ${clB} style="color:${bColor};font-weight:bold;">${r.sim_b_count} 輛 (${r.sim_b_ratio}%)</td>
-                <td ${clC} style="color:${cColor};font-weight:bold;">${r.sim_c_count} 輛 (${r.sim_c_ratio}%)</td></tr>`;
+                <td ${cl('sim_a')} style="color:${aColor};font-weight:bold;">${r.sim_a_count} 輛 (${r.sim_a_ratio}%)</td>
+                <td ${cl('sim_b')} style="color:${bColor};font-weight:bold;">${r.sim_b_count} 輛 (${r.sim_b_ratio}%)</td>
+                <td ${cl('sim_c')} style="color:${cColor};font-weight:bold;">${r.sim_c_count} 輛 (${r.sim_c_ratio}%)</td></tr>`;
         });
     }
     html += '</tbody></table>';
     container.innerHTML = html;
-}
-
-function renderFleetDetails() {
-    const container = document.getElementById('fleet-detail-grid');
-    const simContainer = document.getElementById('sim-detail-grid');
-    let htmlFleet = '', htmlSim = '';
-    rawData.forEach(item => {
-        htmlFleet += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;"><span>3月:</span><span>${item.m_fleet_feb.toLocaleString()}</span></div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--accent-color); font-weight: bold;"><span>4月:</span><span>${item.m_fleet.toLocaleString()}</span></div></div>`;
-        htmlSim += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="font-size: 16px; color: var(--accent-color); font-weight: bold;">${item.sim_total.toLocaleString()} 輛</div></div>`;
-    });
-    container.innerHTML = htmlFleet;
-    simContainer.innerHTML = htmlSim;
-}
-
-function toggleFleetDetails() {
-    showingFleetDetails = !showingFleetDetails;
-    document.getElementById('fleet-summary').classList.toggle('hidden', showingFleetDetails);
-    document.getElementById('fleet-details').classList.toggle('hidden', !showingFleetDetails);
-    document.getElementById('fleet-title-hint').innerText = showingFleetDetails ? '(點擊收合回總計)' : '(點擊展開各縣市明細)';
-}
-
-function toggleSimDetails() {
-    showingSimDetails = !showingSimDetails;
-    document.getElementById('sim-summary').classList.toggle('hidden', showingSimDetails);
-    document.getElementById('sim-details').classList.toggle('hidden', !showingSimDetails);
-    document.getElementById('sim-title-hint').innerText = showingSimDetails ? '(點擊收合回總計)' : '(點擊展開各縣市數量)';
-}
-
-function updateLegendBox() {
-    const legendBox = document.getElementById('legend-box-content');
-    if (currentMode === 'stats') {
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">地圖綜合分數</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>大於等於 92分</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>90 - 91.9分</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>88 - 89.9分</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>低於 88分</div>`;
-    } else if (currentMode === 'tire') {
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">胎壓未達標率</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>0% - 2%</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>3% - 4%</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>5% - 7%</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>大於 7%</div>`;
-    } else if (currentMode === 'operability') {
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">場站可動率 (總分扣分)</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>99% ~ 100% (扣 0 分)</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>95% ~ 99% (扣 1~2 分)</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>91% ~ 95% (扣 3~4 分)</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>未達 91% (扣 5 分)</div><div style="margin-top: 5px; color: var(--text-secondary); font-size: 11px;">*計分邏輯：含下不含上</div>`;
-    } else if (currentMode === 'maintenance') {
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">一級維護率</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>95% - 100%</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>90% - 94.9%</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>85% - 89.9%</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>未達 85%</div>`;
-    } else if (currentMode === 'simulation') {
-        let gradeStr = currentSimulationMetric === 'sim_a' ? 'A級' : (currentSimulationMetric === 'sim_b' ? 'B級' : 'C級');
-        let ranges = currentSimulationMetric === 'sim_a' ? ['0% - 3%', '4% - 5%', '6% - 10%', '大於 10%'] : 
-                     (currentSimulationMetric === 'sim_b' ? ['0% - 10%', '11% - 19%', '20% - 25%', '大於 25%'] : 
-                     ['0% - 30%', '31% - 45%', '46% - 55%', '大於 55%']);
-
-        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">${gradeStr} 異常占比</div>
-            <div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>${ranges[0]}</div>
-            <div class="legend-item"><div class="color-box" style="background: #eab308;"></div>${ranges[1]}</div>
-            <div class="legend-item"><div class="color-box" style="background: #f97316;"></div>${ranges[2]}</div>
-            <div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>${ranges[3]}</div>
-            <div style="margin-top: 5px; color: var(--text-secondary); font-size: 11px;">*不同異常級別有不同的警示門檻</div>`;
-    }
-}
-
-function setupMapClickEvent() {
-    mapChart.on('click', (p) => {
-        let cr = (p.seriesType === 'map') ? rawData.find(r => r.mapNames.includes(p.name)) : rawData.find(r => r.region === p.name);
-        if (cr) {
-            const panel = document.getElementById('cityDetailPanel');
-            if (currentMode === 'stats') { panel.querySelector('#detail-title').innerText = `${cr.region} 指標細節 (4月)`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>綜合分數:</span><span style="color:var(--accent-color); font-weight:bold;">${cr.overall}</span></div><div class="detail-row"><span>場站妥善度:</span><span>${cr.station}</span></div><div class="detail-row"><span>外觀標示:</span><span>${cr.appearance}</span></div><div class="detail-row"><span>重要機能:</span><span>${cr.functionality}</span></div><div class="detail-row"><span>EMS維護率:</span><span>${cr.ems}%</span></div><div class="detail-row"><span>可動率:</span><span>${cr.operability}%</span></div>`; }
-            else if (currentMode === 'tire') { panel.querySelector('#detail-title').innerText = `${cr.region} 胎壓未達標趨勢`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>26年 04月:</span><span style="color:var(--accent-color); font-weight:bold;">${cr.tire_history[6]}% (${cr.tire_count}輛)</span></div>`; }
-            else if (currentMode === 'operability') { let v = (cr.operability - cr.operability_feb).toFixed(2); panel.querySelector('#detail-title').innerText = `${cr.region} 月度分析`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>4月可動率:</span><span style="color:var(--accent-color); font-weight:bold;">${cr.operability.toFixed(2)}%</span></div><div class="detail-row"><span>變動:</span><span style="color:${v < 0 ? 'var(--danger-color)' : 'var(--safe-color)'}; font-weight:bold;">${v > 0 ? '+' : ''}${v}%</span></div>`; }
-            else if (currentMode === 'maintenance') { panel.querySelector('#detail-title').innerText = `${cr.region} 維護統計`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>事故車:</span><span style="color:var(--danger-color); font-weight:bold;">${cr.m_accident} 輛</span></div><div class="detail-row"><span>維護率:</span><span style="color:var(--accent-color); font-weight:bold;">${cr.maintenance_rate}%</span></div>`; }
-            else if (currentMode === 'simulation') { panel.querySelector('#detail-title').innerText = `${cr.region} 模擬體驗`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>A級異常:</span><span style="font-weight:bold;">${cr.sim_a_count} 輛 (${cr.sim_a_ratio}%)</span></div><div class="detail-row"><span>B級異常:</span><span style="font-weight:bold;">${cr.sim_b_count} 輛 (${cr.sim_b_ratio}%)</span></div>`; }
-            panel.style.display = 'block';
-        }
-    });
-    mapChart.getZr().on('click', (e) => { if (!e.target) document.getElementById('cityDetailPanel').style.display = 'none'; });
 }
 
 // 初始化佈局與圖表
@@ -514,7 +482,7 @@ async function initDashboard() {
         renderSubButtons();
         renderFleetDetails(); 
         updateLegendBox();
-        applyLayoutState(); // 初始化佈局狀態
+        applyLayoutState(); 
         
         renderInitialMap();
         updateBarChart();
@@ -528,11 +496,13 @@ async function initDashboard() {
 }
 
 initDashboard();
+
+// 防抖重繪
 let resizeTimer;
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
         if(mapChart) mapChart.resize(); 
         if(barChart) barChart.resize();
-    }, 200); // 等待使用者拖曳停止 0.2 秒後再重繪，大幅節省效能
+    }, 200); 
 });
