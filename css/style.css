@@ -358,3 +358,75 @@ body.full-projection-active .dashboard {
     padding: 0 !important; margin: 0 !important;
     position: fixed; top: 0; left: 0; z-index: 9999;
 }
+
+/* ====================================================
+   🌟 徒兒專屬純淨微調版：膠囊分鈕 & 右下角彈窗
+==================================================== */
+
+/* --- 1. 分鈕「精緻化」收納 (膠囊狀、靠左對齊) --- */
+.controls {
+    display: flex !important;
+    gap: 8px !important; /* 緊湊排列 */
+    padding: 0 20px 12px 20px !important; /* 縮小上下邊距，使其貼緊主按鈕 */
+    justify-content: flex-start !important; /* 🌟 關鍵：靠左對齊母按鈕 */
+    background: var(--bg-color);
+    flex-wrap: wrap;
+}
+
+.controls button {
+    background: rgba(148, 163, 184, 0.1) !important;
+    border: 1px solid transparent !important;
+    color: var(--text-secondary) !important;
+    padding: 5px 16px !important; 
+    border-radius: 20px !important; /* 🌟 關鍵：圓潤的膠囊形狀 */
+    font-size: 13px !important; /* 字體微調，不搶主按鈕風采 */
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: none !important;
+}
+
+.controls button.active {
+    background: var(--accent-color) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4) !important; /* 啟動時發出微光 */
+}
+
+.controls button:hover:not(.active) {
+    border-color: var(--accent-color) !important;
+    color: var(--text-primary) !important;
+}
+
+
+/* --- 2. 地圖彈窗「破雲見日」 (錨定右下角、無限上綱的層級) --- */
+.city-detail-panel {
+    position: absolute !important;
+    top: auto !important; 
+    left: auto !important; /* 🌟 清除原本的左上方定位 */
+    bottom: 20px !important; 
+    right: 20px !important; /* 🌟 精準錨定於右下角 */
+    z-index: 9999 !important; /* 🌟 絕對霸體層級：保證不被任何數據層或圖表遮擋 */
+    background: var(--panel-bg);
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--accent-color); /* 加上科技藍邊框加強視覺重點 */
+    border-radius: 10px;
+    padding: 15px;
+    display: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    min-width: 200px;
+    animation: fadeIn 0.3s;
+}
+
+/* 確保彈窗內部的標題與文字間距好看 */
+.city-detail-panel h4 { 
+    margin: 0 0 12px 0; 
+    color: var(--accent-color); 
+    border-bottom: 1px solid var(--border-color); 
+    padding-bottom: 5px; 
+    font-size: 16px; 
+}
+.detail-row { 
+    display: flex; 
+    justify-content: space-between; 
+    margin-bottom: 8px; 
+    font-size: 14px; 
+}
