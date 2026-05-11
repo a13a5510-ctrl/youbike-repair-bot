@@ -16,11 +16,9 @@ let globalFontScale = 1;
 const mapChart = echarts.init(document.getElementById('mapChart'));
 const barChart = echarts.init(document.getElementById('barChart'));
 
-// js/app.js 內的 injectSimData 修正版
 function injectSimData() {
     if (typeof simJsonData !== 'undefined') {
         simJsonData.forEach(sim => {
-            // 找到主資料庫中對應的縣市
             let target = rawData.find(r => r.region === sim.region);
             if (target) {
                 if (sim.current_month) {
@@ -64,10 +62,8 @@ function renderSubButtons() {
             document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
-            // 🌟 視圖修復 1：點擊施測數據統計分鈕時，強制解除滿版地圖鎖定，並隱藏首頁浮動數據卡
             if(currentMode === 'stats') {
                 currentStatsMetric = metric.key;
-                document.getElementById('main-dashboard').classList.remove('full-width-map');
                 document.getElementById('floating-stats-area').classList.add('hidden');
             }
             if(currentMode === 'maintenance') currentMaintenanceMetric = metric.key;
@@ -78,21 +74,22 @@ function renderSubButtons() {
             toggleDataView();
             if (isDataView) renderDataView(); 
             
-            // 🌟 防呆：點擊「補充說明」時，若地圖滿版則強制切換至右區
+            // 🌟 智慧防呆：點擊「補充說明」時，若地圖為滿版左側，則流暢滑向右側
             if (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info') {
-                if (layoutState === 'left') { layoutState = 'right'; }
+                if (layoutState === 'left') { 
+                    layoutState = 'right'; 
+                }
                 document.getElementById('barChart').classList.add('hidden');
                 document.getElementById('varianceToggleBtn').classList.add('hidden');
                 document.getElementById('maintenance-info-area').classList.remove('hidden');
             } else {
                 document.getElementById('barChart').classList.remove('hidden');
                 document.getElementById('maintenance-info-area').classList.add('hidden');
-                setTimeout(() => { mapChart.resize(); barChart.resize(); }, 350);
                 updateBarChart(); 
                 updateMapTheme();
             }
 
-            // 🌟 視圖修復 2：切換子指標後，重新觸發佈局計算，喚醒右上角的切換按鈕！
+            // 觸發全新的絲滑佈局引擎
             applyLayoutState();
         });
         btnContainer.appendChild(btn);
@@ -117,7 +114,6 @@ function switchMode(mode, targetElement) {
     const simMetricsArea = document.getElementById('simulation-metrics-area');
     const detailPanel = document.getElementById('cityDetailPanel');
     const infoArea = document.getElementById('maintenance-info-area');
-    const dashboard = document.getElementById('main-dashboard');
     const floatingStats = document.getElementById('floating-stats-area');
 
     maintMetricsArea.classList.add('hidden');
@@ -127,10 +123,8 @@ function switchMode(mode, targetElement) {
     document.getElementById('barChart').classList.remove('hidden');
 
     if (mode === 'stats') {
-        dashboard.classList.add('full-width-map');
         currentStatsMetric = ''; 
     } else {
-        dashboard.classList.remove('full-width-map'); 
         if (mode === 'maintenance') maintMetricsArea.classList.remove('hidden');
         else if (mode === 'simulation') simMetricsArea.classList.remove('hidden');
     }
@@ -141,19 +135,15 @@ function switchMode(mode, targetElement) {
     updateMapTheme(); 
     toggleDataView();
     
-    // 🌟 視圖修復 3：切換主模式時，重新套用佈局狀態
+    // 觸發佈局
     applyLayoutState();
     
-    setTimeout(() => {
-        mapChart.resize();
-        if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
-            barChart.resize();
-            updateBarChart(); 
-        }
-    }, 350);
+    if(currentMode !== 'stats' && (currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info')) {
+        updateBarChart(); 
+    }
 }
 
-// 🌟 三段佈局切換引擎
+// 🌟 升級版：三段佈局絲滑切換引擎
 let layoutState = 'split';
 document.getElementById('layoutToggleBtn').addEventListener('click', () => {
     if (layoutState === 'split') layoutState = 'left';
@@ -163,28 +153,38 @@ document.getElementById('layoutToggleBtn').addEventListener('click', () => {
 });
 
 function applyLayoutState() {
-    const left = document.getElementById('map-panel-container');
-    const right = document.getElementById('right-chart-panel');
+    const dashboard = document.getElementById('main-dashboard');
     const btn = document.getElementById('layoutToggleBtn');
     
-    if (!btn || !left || !right) return;
+    if (!btn || !dashboard) return;
 
-    // 🌟 視圖修復 4：如果是純首頁（未選擇指標），強制左區並隱藏按鈕防呆
+    // 清除舊版的硬核 display 設定，全部交由 CSS 的 class 去處理滑動
+    document.getElementById('map-panel-container').style.display = '';
+    document.getElementById('right-chart-panel').style.display = '';
+
+    // 首頁強制隱藏按鈕，並設為左滿版
     if (currentMode === 'stats' && currentStatsMetric === '') {
         btn.style.display = 'none'; 
-        left.style.display = 'flex'; 
-        right.style.display = 'none';
+        dashboard.className = 'dashboard layout-left';
     } else {
         btn.style.display = 'inline-block';
-        if (layoutState === 'split') { 
-            left.style.display = 'flex'; right.style.display = 'flex'; btn.innerText = '🔀 雙拼視圖'; 
-        } else if (layoutState === 'left') { 
-            left.style.display = 'flex'; right.style.display = 'none'; btn.innerText = '🗺️ 滿版左區'; 
-        } else if (layoutState === 'right') { 
-            left.style.display = 'none'; right.style.display = 'flex'; btn.innerText = '📊 滿版右區'; 
+        dashboard.className = `dashboard layout-${layoutState}`;
+        if (layoutState === 'split') { btn.innerText = '🔀 雙拼視圖'; }
+        else if (layoutState === 'left') { btn.innerText = '🗺️ 滿版左區'; }
+        else if (layoutState === 'right') { btn.innerText = '📊 滿版右區'; }
+    }
+
+    // 🌟 神級魔法：高幀率圖表重繪 (High-FPS Resize)
+    // 讓 ECharts 在面板「滑動」的 450 毫秒期間，以每秒 60 幀的速度動態調整大小，確保縮放過程無比流暢！
+    let startTime = Date.now();
+    function smoothResize() {
+        if(mapChart) mapChart.resize(); 
+        if(barChart) barChart.resize();
+        if (Date.now() - startTime < 450) { 
+            requestAnimationFrame(smoothResize);
         }
     }
-    setTimeout(() => { if(mapChart) mapChart.resize(); if(barChart) barChart.resize(); }, 150);
+    requestAnimationFrame(smoothResize);
 }
 
 // 數據切換與高亮
@@ -199,7 +199,6 @@ function updateVarianceBtnUI() {
     if (!varianceToggleBtn) return;
     if (currentMode === 'tire' || currentMode === 'stats' && currentStatsMetric === '') { varianceToggleBtn.classList.add('hidden'); return; }
     varianceToggleBtn.classList.remove('hidden');
-    
     let textEl = document.getElementById('varianceToggleText');
     let iconEl = document.querySelector('#varianceToggleBtn .btn-icon');
     if(textEl) textEl.innerText = showVariance ? '還原數值' : '較上月變動';
@@ -265,12 +264,10 @@ window.handleRowDblClick = function(region) {
 
         if (item && item.top_problems && item.top_problems[grade]) {
             document.getElementById('simModalTitle').innerHTML = `${region} <span style="color:${gColor}; font-size:18px;">[${grade.toUpperCase()}級: ${gDesc}]</span>`;
-            // 🌟 核心升級：使用正則表達式的「後行斷言 (Lookbehind)」防護逗號切斷
             let probs = item.top_problems[grade].split(/(?<=\))、/).map(p => `<li style="border-left: 5px solid ${gColor};">${p}</li>`).join('');
             document.getElementById('simModalBody').innerHTML = `<ul>${probs}</ul>`;
             document.getElementById('simModal').classList.remove('hidden');
         } else {
-            // 🌟 補回查無資料的預設空視窗顯示
             document.getElementById('simModalTitle').innerHTML = `${region} - ${grade.toUpperCase()}級異常`;
             document.getElementById('simModalBody').innerHTML = `<p style="padding: 10px; color: var(--text-secondary);">此縣市目前無具體問題紀錄。</p>`;
             document.getElementById('simModal').classList.remove('hidden');
@@ -280,7 +277,7 @@ window.handleRowDblClick = function(region) {
 
 barChart.on('click', (params) => { let r = currentMode === 'tire' ? params.seriesName : params.name; if (r) highlightRow(r); });
 
-// 🌟 手冊控制與點擊外部關閉
+// 手冊控制與點擊外部關閉
 const helpFabBtn = document.getElementById('helpFabBtn');
 if (helpFabBtn) {
     helpFabBtn.addEventListener('click', () => document.getElementById('helpModal').classList.remove('hidden'));
