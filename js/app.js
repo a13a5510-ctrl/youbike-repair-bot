@@ -16,15 +16,38 @@ let globalFontScale = 1;
 const mapChart = echarts.init(document.getElementById('mapChart'));
 const barChart = echarts.init(document.getElementById('barChart'));
 
-// 注入 JSON
+// js/app.js 內的 injectSimData 修正版
 function injectSimData() {
     if (typeof simJsonData !== 'undefined') {
         simJsonData.forEach(sim => {
+            // 找到主資料庫中對應的縣市
             let target = rawData.find(r => r.region === sim.region);
-            if (target && sim.current_month.top_problems) {
-                target.top_problems = sim.current_month.top_problems; 
+            if (target) {
+                if (sim.current_month) {
+                    // 🌟 核心修正：將 sim_data.js 的最新數量同步進來
+                    target.sim_total = sim.current_month.total;
+                    target.sim_a_count = sim.current_month.a;
+                    target.sim_b_count = sim.current_month.b;
+                    target.sim_c_count = sim.current_month.c;
+
+                    // 🌟 自動重新計算本月佔比 (%)
+                    target.sim_a_ratio = target.sim_total > 0 ? parseFloat((target.sim_a_count / target.sim_total * 100).toFixed(1)) : 0;
+                    target.sim_b_ratio = target.sim_total > 0 ? parseFloat((target.sim_b_count / target.sim_total * 100).toFixed(1)) : 0;
+                    target.sim_c_ratio = target.sim_total > 0 ? parseFloat((target.sim_c_count / target.sim_total * 100).toFixed(1)) : 0;
+
+                    // 同步最新的 Top 敘述
+                    target.top_problems = sim.current_month.top_problems;
+                }
+                
+                if (sim.prev_month) {
+                    // 🌟 同步上月佔比 (供圖表對比使用)
+                    target.sim_a_lm = sim.prev_month.total > 0 ? parseFloat((sim.prev_month.a / sim.prev_month.total * 100).toFixed(1)) : 0;
+                    target.sim_b_lm = sim.prev_month.total > 0 ? parseFloat((sim.prev_month.b / sim.prev_month.total * 100).toFixed(1)) : 0;
+                    target.sim_c_lm = sim.prev_month.total > 0 ? parseFloat((sim.prev_month.c / sim.prev_month.total * 100).toFixed(1)) : 0;
+                }
             }
         });
+        console.log("✅ 模擬體驗數據已全面同步至主資料庫");
     }
 }
 injectSimData();
