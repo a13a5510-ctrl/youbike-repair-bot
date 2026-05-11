@@ -249,7 +249,18 @@ body.laser-active, body.laser-active * { cursor: none !important; }
     padding: 12px 10px; text-align: center; border-bottom: 2px solid var(--accent-color);
     position: sticky; top: 0; z-index: 2; backdrop-filter: blur(10px);
 }
-.clean-data-table td { padding: 12px 10px; text-align: center; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
+/* 🌟 確保表格內的文字也不會擠成兩行 */
+.clean-data-table td {
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    
+    /* 加入這兩行 */
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis; /* 如果真的太長，顯示... 而不是切成兩行 */
+}
 .clean-data-table tbody tr:hover td { background: rgba(56, 189, 248, 0.1); color: var(--text-primary); }
 
 /* 🌟 極致清晰：直行高光 (追蹤上方選單) */
