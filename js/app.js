@@ -6,10 +6,11 @@ let showingFleetDetails = false;
 let showingSimDetails = false;
 let isDataView = false; 
 let showVariance = false; 
-let isPresentationMode = false; // 🌟 修復 1：補回投影模式狀態變數
-let isLaserMode = false;        // 🌟 修復 1：補回雷射筆狀態變數
+let isPresentationMode = false; // 🌟 雷射筆與投影狀態宣告
+let isLaserMode = false;        
 
-let currentStatsMetric = 'station';
+// 🌟 預設為空，讓首頁維持最乾淨的「滿版左側地圖」
+let currentStatsMetric = ''; 
 let currentMaintenanceMetric = 'maintenance_rate';
 let currentSimulationMetric = 'sim_a';
 
@@ -100,12 +101,12 @@ function renderSubButtons() {
     });
 }
 
-// 🌟 修復 2：表格標題點擊時的「隔空點穴」連動函數
+// 🌟 隔空點穴：表格標題點擊時的連動函數
 window.triggerSubMetric = function(key) {
     const btns = document.querySelectorAll('.controls button');
     for (let b of btns) {
         if (b.dataset.key === key) {
-            b.click(); // 模擬點擊膠囊按鈕，完美觸發所有更新機制
+            b.click(); 
             break;
         }
     }
@@ -158,6 +159,7 @@ function switchMode(mode, targetElement) {
     }
 }
 
+// 🌟 三段佈局切換
 let layoutState = 'split';
 document.getElementById('layoutToggleBtn').addEventListener('click', () => {
     if (layoutState === 'split') layoutState = 'left';
@@ -285,7 +287,7 @@ window.handleRowDblClick = function(region) {
         if (item && item.top_problems && item.top_problems[grade]) {
             document.getElementById('simModalTitle').innerHTML = `${region} <span style="color:${gColor}; font-size:18px;">[${grade.toUpperCase()}級: ${gDesc}]</span>`;
             
-            // 安全斷句切割
+            // 🌟 終極安全斷句法：使用標準 Split 而非 Lookbehind 正則，保證 100% 瀏覽器相容，不再出錯白屏！
             let probsArray = item.top_problems[grade].split(')、');
             let probs = probsArray.map((p, index) => {
                 let text = index === probsArray.length - 1 ? p : p + ')';
@@ -353,7 +355,7 @@ if (laserToggleBtn && laserDot) {
     document.addEventListener('mousemove', (e) => { if (isLaserMode) laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`; });
 }
 
-// ECharts 核心函數
+// 🌟 ECharts 核心：取消所有壓縮，保證程式穩定運行
 function getMapValue(item) {
     if (currentMode === 'stats') return item.overall;
     else if (currentMode === 'tire') return item.tire_history[6]; 
@@ -361,41 +363,196 @@ function getMapValue(item) {
     else if (currentMode === 'maintenance') return item.maintenance_rate; 
     else if (currentMode === 'simulation') return item[currentSimulationMetric + '_ratio']; 
 }
+
 function getVisualMapOption() {
-    const s = getComputedStyle(document.body); const d = s.getPropertyValue('--danger-color').trim(); const f = s.getPropertyValue('--safe-color').trim();
-    if (currentMode === 'stats') return { show: false, min: 86, max: 94, inRange: { color: [d, '#f97316', '#eab308', f] } };
-    else if (currentMode === 'tire') return { show: false, min: 0, max: 8, inRange: { color: [f, '#eab308', '#f97316', d] } };
-    else if (currentMode === 'operability') return { show: false, min: 90, max: 99, inRange: { color: [d, '#f97316', '#eab308', f] } };
-    else if (currentMode === 'maintenance') return { show: false, min: 80, max: 100, inRange: { color: [d, '#f97316', '#eab308', f] } };
-    else if (currentMode === 'simulation') { let m = currentSimulationMetric === 'sim_a' ? 10 : (currentSimulationMetric === 'sim_b' ? 25 : 60); return { show: false, min: 0, max: m, inRange: { color: [f, '#eab308', '#f97316', d] } }; }
-}
-function renderInitialMap() { updateMapTheme(); }
-function updateMapTheme() {
-    if (!twGeoJson) return; const s = getComputedStyle(document.body); const t = s.getPropertyValue('--text-primary').trim(); const m = s.getPropertyValue('--map-base').trim(); const a = s.getPropertyValue('--accent-color').trim();
-    let mapD = [], lineD = [], scatD = [];
-    rawData.forEach(i => { let v = getMapValue(i); i.mapNames.forEach(n => mapD.push({ name: n, value: v, customRegion: i.region })); lineD.push({ coords: [i.mapCenter, i.labelPos], value: v }); scatD.push({ name: i.region, value: [i.labelPos[0], i.labelPos[1], v, i.tire_count] }); });
-    mapChart.setOption({ geo: { map: 'Taiwan', roam: true, scaleLimit: { min: 0.8, max: 5 }, itemStyle: { areaColor: m, borderColor: isLightMode ? '#ffffff' : '#334155', borderWidth: 1 }, emphasis: { itemStyle: { areaColor: a }, label: { show: false } } }, visualMap: getVisualMapOption(), series: [{ type: 'map', geoIndex: 0, data: mapD }, { type: 'lines', coordinateSystem: 'geo', zlevel: 2, lineStyle: { color: isLightMode ? '#94a3b8' : '#64748b', width: 1.5, opacity: 0.6, curveness: 0.2 }, data: lineD }, { type: 'scatter', coordinateSystem: 'geo', zlevel: 3, symbolSize: 0, data: scatD, itemStyle: { color: a }, label: { show: true, position: 'center', formatter: (p) => (currentMode === 'tire' ? `{region|${p.name}}\n{score|${p.value[3]} 輛}` : `{region|${p.name}}\n{score|${p.value[2]} ${currentMode === 'stats' ? '分' : '%'}}`), backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#94a3b8' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4, rich: { region: { color: t, fontSize: 13 * globalFontScale, fontWeight: 'bold', align: 'center', padding: [0, 0, 4, 0] }, score: { color: a, fontSize: 14 * globalFontScale, fontWeight: 'bold', align: 'center' } } } }] }, false);
-}
-function updateBarChart() {
-    if (!twGeoJson || (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info')) return;
-    const s = getComputedStyle(document.body); const t = s.getPropertyValue('--text-primary').trim(); const g = s.getPropertyValue('--chart-grid').trim(); const a = s.getPropertyValue('--accent-color').trim(); const d = s.getPropertyValue('--danger-color').trim(); const f = s.getPropertyValue('--safe-color').trim();
-    if (currentMode === 'tire') {
-        const sortedD = [...rawData].sort((a, b) => b.tire_history[6] - a.tire_history[6]); const regions = sortedD.map(i => i.region); const months = ['25/11', '25/12', '26/01', '26/02', '26/03', '26/04']; const dc = ['#e11d48', '#be185d', '#7e22ce', '#b45309', '#a21caf', '#c2410c', '#1d4ed8']; let ci = 0; const sd = [];
-        sortedD.forEach((i, idx) => { let v = i.tire_history[6]; let ib = v > 4.5; let lc = ib ? dc[ci++ % dc.length] : (isLightMode ? '#94a3b8' : '#475569'); sd.push({ name: i.region, type: 'line', data: i.tire_history.slice(1), smooth: true, symbol: ib ? 'circle' : 'none', symbolSize: 8, lineStyle: { width: ib ? 4 : 2, opacity: ib ? 1 : 0.4 }, itemStyle: { color: lc }, emphasis: { focus: 'series', lineStyle: { width: 7, shadowBlur: 15, shadowColor: lc, opacity: 1 }, label: { show: true, fontSize: 16 * globalFontScale, fontWeight: 'bold' } }, label: { show: false }, endLabel: { show: true, formatter: '{a} {c}%', color: 'inherit', fontSize: (ib ? 14 : 11) * globalFontScale, fontWeight: ib ? 'bold' : 'normal' }, labelLayout: { moveOverlap: 'shiftY' }, zlevel: ib ? 10 : 1 }); });
-        barChart.setOption({ title: { text: '全國各縣市前後胎壓未達標趨勢 (近 6 個月)', left: 'center', textStyle: { color: t, fontSize: 15 * globalFontScale } }, tooltip: { trigger: 'axis', backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: t }, valueFormatter: (v) => v + '%' }, grid: { left: '3%', right: '12%', bottom: '10%', top: '15%', containLabel: true }, xAxis: { type: 'category', data: months, axisLabel: { color: t, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: g } } }, yAxis: { type: 'value', axisLabel: { color: t, formatter: '{value} %', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: g, type: 'dashed' } } }, series: sd }, true); return;
+    const style = getComputedStyle(document.body);
+    const dangerColor = style.getPropertyValue('--danger-color').trim();
+    const safeColor = style.getPropertyValue('--safe-color').trim();
+    
+    if (currentMode === 'stats') return { show: false, min: 86, max: 94, inRange: { color: [dangerColor, '#f97316', '#eab308', safeColor] } };
+    else if (currentMode === 'tire') return { show: false, min: 0, max: 8, inRange: { color: [safeColor, '#eab308', '#f97316', dangerColor] } };
+    else if (currentMode === 'operability') return { show: false, min: 90, max: 99, inRange: { color: [dangerColor, '#f97316', '#eab308', safeColor] } };
+    else if (currentMode === 'maintenance') return { show: false, min: 80, max: 100, inRange: { color: [dangerColor, '#f97316', '#eab308', safeColor] } };
+    else if (currentMode === 'simulation') {
+        let maxVal = currentSimulationMetric === 'sim_a' ? 10 : (currentSimulationMetric === 'sim_b' ? 25 : 60);
+        return { show: false, min: 0, max: maxVal, inRange: { color: [safeColor, '#eab308', '#f97316', dangerColor] } };
     }
-    let rs, cv, pv, vv, ct, av, ip = false; const gvc = (v) => { if (v === 0) return isLightMode ? '#94a3b8' : '#475569'; if ((currentMode === 'maintenance' && currentMaintenanceMetric === 'm_accident') || currentMode === 'simulation') return v > 0 ? d : f; return v > 0 ? f : d; };
-    if (currentMode === 'stats') { const sd = [...rawData].sort((a, b) => a[currentStatsMetric] - b[currentStatsMetric]); rs = sd.map(i => i.region); cv = sd.map(i => i[currentStatsMetric]); pv = sd.map(i => i[currentStatsMetric + '_feb']); vv = sd.map(i => parseFloat((i[currentStatsMetric] - i[currentStatsMetric + '_feb']).toFixed(2))); ct = `各區指標對比 - ${statsMetrics.find(m => m.key === currentStatsMetric).label}`; }
-    else if (currentMode === 'operability') { ip = true; const sd = [...rawData].sort((a, b) => a.operability - b.operability); rs = sd.map(i => i.region); cv = sd.map(i => i.operability); pv = sd.map(i => i.operability_feb); vv = sd.map(i => parseFloat((i.operability - i.operability_feb).toFixed(2))); ct = `各縣市場站可動率對比`; }
-    else if (currentMode === 'maintenance') { ip = currentMaintenanceMetric === 'maintenance_rate'; const sl = currentMaintenanceMetric === 'm_accident' ? (a, b) => b[currentMaintenanceMetric] - a[currentMaintenanceMetric] : (a, b) => a[currentMaintenanceMetric] - b[currentMaintenanceMetric]; const sd = [...rawData].sort(sl); rs = sd.map(i => i.region); cv = sd.map(i => i[currentMaintenanceMetric]); pv = sd.map(i => i[currentMaintenanceMetric + '_feb']); vv = sd.map(i => parseFloat((i[currentMaintenanceMetric] - i[currentMaintenanceMetric + '_feb']).toFixed(2))); ct = `各縣市${maintenanceMetrics.find(m => m.key === currentMaintenanceMetric).label}對比`; }
-    else if (currentMode === 'simulation') { ip = true; const sd = [...rawData].sort((a, b) => b[currentSimulationMetric + '_ratio'] - a[currentSimulationMetric + '_ratio']); rs = sd.map(i => i.region); cv = sd.map(i => i[currentSimulationMetric + '_ratio']); pv = sd.map(i => i[currentSimulationMetric + '_lm']); vv = sd.map(i => parseFloat((i[currentSimulationMetric + '_ratio'] - i[currentSimulationMetric + '_lm']).toFixed(2))); ct = `${simulationMetrics.find(m => m.key === currentSimulationMetric).label}異常占比對比`; }
-    let dd = showVariance ? vv : cv; av = (dd.reduce((a, c) => a + c, 0) / dd.length).toFixed(ip ? 2 : 1);
-    let sc = showVariance ? [{ name: '較上月變動', type: 'bar', barWidth: '40%', itemStyle: { borderRadius: [4, 4, 0, 0] }, data: vv.map(v => ({ value: v, itemStyle: { color: gvc(v) } })), label: { show: true, position: 'top', color: t, fontWeight: 'bold', formatter: v => (v.value > 0 ? '+' : '') + v.value + (ip?'%':''), fontSize: 13 * globalFontScale }, markLine: { symbol: 'none', data: [{ type: 'average', name: '平均變動' }], label: { formatter: `平均\n${av > 0 ? '+':''}${av}${ip?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } } }] 
-    : [{ name: '3月 (前月)', type: 'bar', barWidth: '30%', itemStyle: { color: isLightMode ? '#94a3b8' : '#475569', borderRadius: [4, 4, 0, 0] }, label: { show: false }, data: pv }, { name: '4月 (當月)', type: 'bar', barWidth: '30%', itemStyle: { borderRadius: [4, 4, 0, 0] }, data: cv.map((v, idx) => { let bc = a; if (currentMode === 'stats' || currentMode === 'operability') bc = v < av ? d : a; else if (currentMode === 'simulation') bc = v > av ? d : f; else if (currentMode === 'maintenance') { if (currentMaintenanceMetric === 'm_accident') bc = v > av ? d : f; else if (currentMaintenanceMetric === 'maintenance_rate') bc = v < av ? d : a; } return { value: v, itemStyle: { color: bc } }; }), label: { show: true, position: 'top', color: t, fontWeight: 'bold', formatter: ip ? '{c}%' : '{c}', fontSize: 12 * globalFontScale }, markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `4月平均\n${av}${ip?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } } }];
-    barChart.setOption({ title: { text: ct + (showVariance ? ' - 較上月變動' : ' - 本月數值'), left: 'center', textStyle: { color: t, fontSize: 15 * globalFontScale } }, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: t }, formatter: (p) => { let h = `<div style="font-weight:bold;margin-bottom:5px;">${p[0].axisValue}</div>`; p.forEach(x => { h += `${x.marker} ${x.seriesName}: <b style="color:${x.color}">${(x.value > 0 && showVariance ? '+' : '')}${x.value}${ip ? '%' : ''}</b><br/>`; }); return h; } }, legend: { show: !showVariance, data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: t, fontSize: 12 * globalFontScale } }, grid: { left: '3%', right: '8%', bottom: '15%', top: '15%', containLabel: true }, xAxis: { type: 'category', data: rs, axisLabel: { color: t, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: g } } }, yAxis: { type: 'value', min: (v) => (ip && !showVariance) ? Math.max(0, Math.floor(v.min - 5)) : null, axisLabel: { color: t, formatter: ip ? '{value} %' : '{value}', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: g, type: 'dashed' } } }, series: sc }, true);
 }
 
-// 🌟 新增：透過表格標題點擊呼叫對應的圖表與按鈕更新
+function renderInitialMap() {
+    updateMapTheme(); 
+}
+
+function updateMapTheme() {
+    if (!twGeoJson) return;
+    const style = getComputedStyle(document.body);
+    const textColor = style.getPropertyValue('--text-primary').trim();
+    const mapBaseColor = style.getPropertyValue('--map-base').trim();
+    const accentColor = style.getPropertyValue('--accent-color').trim();
+
+    let mapData = [], lineData = [], scatterData = [];
+    rawData.forEach(item => {
+        let val = getMapValue(item);
+        item.mapNames.forEach(name => mapData.push({ name: name, value: val, customRegion: item.region }));
+        lineData.push({ coords: [item.mapCenter, item.labelPos], value: val });
+        scatterData.push({ name: item.region, value: [item.labelPos[0], item.labelPos[1], val, item.tire_count] });
+    });
+
+    mapChart.setOption({
+        geo: { map: 'Taiwan', roam: true, scaleLimit: { min: 0.8, max: 5 }, itemStyle: { areaColor: mapBaseColor, borderColor: isLightMode ? '#ffffff' : '#334155', borderWidth: 1 }, emphasis: { itemStyle: { areaColor: accentColor }, label: { show: false } } },
+        visualMap: getVisualMapOption(),
+        series: [
+            { type: 'map', geoIndex: 0, data: mapData }, 
+            { type: 'lines', coordinateSystem: 'geo', zlevel: 2, lineStyle: { color: isLightMode ? '#94a3b8' : '#64748b', width: 1.5, opacity: 0.6, curveness: 0.2 }, data: lineData }, 
+            { 
+                type: 'scatter', coordinateSystem: 'geo', zlevel: 3, symbolSize: 0, data: scatterData, itemStyle: { color: accentColor }, 
+                label: {
+                    show: true, position: 'center', 
+                    formatter: function(params) { 
+                        if (currentMode === 'tire') return `{region|${params.name}}\n{score|${params.value[3]} 輛}`;
+                        let unit = '%'; if(currentMode === 'stats') unit = '分';
+                        return `{region|${params.name}}\n{score|${params.value[2]} ${unit}}`; 
+                    },
+                    backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#94a3b8' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4, 
+                    rich: { 
+                        region: { color: textColor, fontSize: 13 * globalFontScale, fontWeight: 'bold', align: 'center', padding: [0, 0, 4, 0] }, 
+                        score: { color: accentColor, fontSize: 14 * globalFontScale, fontWeight: 'bold', align: 'center' } 
+                    }
+                } 
+            }
+        ]
+    }, false); 
+}
+
+function updateBarChart() {
+    if (!twGeoJson) return;
+    if (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info') return;
+    // 🌟 預防首頁空指標報錯，保護圖表不崩潰
+    if (currentMode === 'stats' && currentStatsMetric === '') return; 
+    
+    const style = getComputedStyle(document.body);
+    const textColor = style.getPropertyValue('--text-primary').trim();
+    const gridColor = style.getPropertyValue('--chart-grid').trim();
+    const accentColor = style.getPropertyValue('--accent-color').trim();
+    const dangerColor = style.getPropertyValue('--danger-color').trim();
+    const safeColor = style.getPropertyValue('--safe-color').trim();
+
+    if (currentMode === 'tire') {
+        const sortedData = [...rawData].sort((a, b) => b.tire_history[6] - a.tire_history[6]); 
+        const regions = sortedData.map(item => item.region);
+        const months = ['25/11', '25/12', '26/01', '26/02', '26/03', '26/04'];
+        const dangerColors = ['#e11d48', '#be185d', '#7e22ce', '#b45309', '#a21caf', '#c2410c', '#1d4ed8'];
+        let colorIdx = 0; const seriesData = [];
+
+        sortedData.forEach((item, index) => {
+            let val = item.tire_history[6]; let isBad = val > 4.5; 
+            let lineColor = isBad ? dangerColors[colorIdx++ % dangerColors.length] : (isLightMode ? '#94a3b8' : '#475569');
+            seriesData.push({
+                name: item.region, type: 'line', data: item.tire_history.slice(1), smooth: true, symbol: isBad ? 'circle' : 'none', symbolSize: 8,
+                lineStyle: { width: isBad ? 4 : 2, opacity: isBad ? 1 : 0.4 }, itemStyle: { color: lineColor },
+                emphasis: { focus: 'series', lineStyle: { width: 7, shadowBlur: 15, shadowColor: lineColor, opacity: 1 }, label: { show: true, fontSize: 16 * globalFontScale, fontWeight: 'bold' } },
+                label: { show: false }, endLabel: { show: true, formatter: '{a} {c}%', color: 'inherit', fontSize: (isBad ? 14 : 11) * globalFontScale, fontWeight: isBad ? 'bold' : 'normal' },
+                labelLayout: { moveOverlap: 'shiftY' }, zlevel: isBad ? 10 : 1
+            });
+        });
+
+        barChart.setOption({
+            title: { text: '全國各縣市前後胎壓未達標趨勢 (近 6 個月)', left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } },
+            tooltip: { trigger: 'axis', backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor }, valueFormatter: (value) => value + '%' },
+            legend: { show: false }, grid: { left: '3%', right: '12%', bottom: '10%', top: '15%', containLabel: true }, 
+            xAxis: { type: 'category', data: months, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
+            yAxis: { type: 'value', axisLabel: { color: textColor, formatter: '{value} %', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
+            series: seriesData
+        }, true);
+        return;
+    }
+
+    let regions, currentValues, previousValues, varianceValues, chartTitle, avgValue, isPercentage = false;
+
+    const getVarColor = (val) => {
+        if (val === 0) return isLightMode ? '#94a3b8' : '#475569';
+        if (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_accident') return val > 0 ? dangerColor : safeColor;
+        if (currentMode === 'simulation') return val > 0 ? dangerColor : safeColor;
+        return val > 0 ? safeColor : dangerColor;
+    };
+
+    if (currentMode === 'stats') {
+        const sortedData = [...rawData].sort((a, b) => a[currentStatsMetric] - b[currentStatsMetric]);
+        regions = sortedData.map(item => item.region); 
+        currentValues = sortedData.map(item => item[currentStatsMetric]); 
+        previousValues = sortedData.map(item => item[currentStatsMetric + '_feb']);
+        varianceValues = sortedData.map(item => parseFloat((item[currentStatsMetric] - item[currentStatsMetric + '_feb']).toFixed(2)));
+        chartTitle = `各區指標對比 - ${statsMetrics.find(m => m.key === currentStatsMetric).label} (由低至高)`;
+    } else if (currentMode === 'operability') {
+        isPercentage = true;
+        const sortedData = [...rawData].sort((a, b) => a.operability - b.operability);
+        regions = sortedData.map(item => item.region); 
+        currentValues = sortedData.map(item => item.operability); 
+        previousValues = sortedData.map(item => item.operability_feb);
+        varianceValues = sortedData.map(item => parseFloat((item.operability - item.operability_feb).toFixed(2)));
+        chartTitle = `各縣市場站可動率對比 (由低至高)`;
+    } else if (currentMode === 'maintenance') {
+        isPercentage = currentMaintenanceMetric === 'maintenance_rate';
+        const sortLogic = currentMaintenanceMetric === 'm_accident' ? (a, b) => b[currentMaintenanceMetric] - a[currentMaintenanceMetric] : (a, b) => a[currentMaintenanceMetric] - b[currentMaintenanceMetric];
+        const sortedData = [...rawData].sort(sortLogic);
+        regions = sortedData.map(item => item.region); 
+        currentValues = sortedData.map(item => item[currentMaintenanceMetric]); 
+        previousValues = sortedData.map(item => item[currentMaintenanceMetric + '_feb']);
+        varianceValues = sortedData.map(item => parseFloat((item[currentMaintenanceMetric] - item[currentMaintenanceMetric + '_feb']).toFixed(2)));
+        chartTitle = `各縣市${maintenanceMetrics.find(m => m.key === currentMaintenanceMetric).label}對比`;
+    } else if (currentMode === 'simulation') {
+        isPercentage = true;
+        const sortedData = [...rawData].sort((a, b) => b[currentSimulationMetric + '_ratio'] - a[currentSimulationMetric + '_ratio']);
+        regions = sortedData.map(item => item.region); 
+        currentValues = sortedData.map(item => item[currentSimulationMetric + '_ratio']); 
+        previousValues = sortedData.map(item => item[currentSimulationMetric + '_lm']);
+        varianceValues = sortedData.map(item => parseFloat((item[currentSimulationMetric + '_ratio'] - item[currentSimulationMetric + '_lm']).toFixed(2)));
+        chartTitle = `${simulationMetrics.find(m => m.key === currentSimulationMetric).label}異常占比對比 (由高至低)`;
+    }
+
+    let displayData = showVariance ? varianceValues : currentValues;
+    avgValue = (displayData.reduce((acc, curr) => acc + curr, 0) / displayData.length).toFixed(isPercentage ? 2 : 1);
+
+    let seriesConfig = [];
+    if (showVariance) {
+        seriesConfig = [{
+            name: '較上月變動', type: 'bar', barWidth: '40%', itemStyle: { borderRadius: [4, 4, 0, 0] },
+            data: varianceValues.map(val => ({ value: val, itemStyle: { color: getVarColor(val) } })),
+            label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: val => (val.value > 0 ? '+' : '') + val.value + (isPercentage?'%':''), fontSize: 13 * globalFontScale },
+            markLine: { symbol: 'none', data: [{ type: 'average', name: '平均變動' }], label: { formatter: `平均\n${avgValue > 0 ? '+':''}${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
+        }];
+    } else {
+        seriesConfig = [
+            { name: '3月 (前月)', type: 'bar', barWidth: '30%', itemStyle: { color: isLightMode ? '#94a3b8' : '#475569', borderRadius: [4, 4, 0, 0] }, label: { show: false }, data: previousValues },
+            {
+                name: '4月 (當月)', type: 'bar', barWidth: '30%', itemStyle: { borderRadius: [4, 4, 0, 0] },
+                data: currentValues.map((val, idx) => {
+                    let barColor = accentColor;
+                    if (currentMode === 'stats' || currentMode === 'operability') barColor = val < avgValue ? dangerColor : accentColor;
+                    else if (currentMode === 'simulation') barColor = val > avgValue ? dangerColor : safeColor;
+                    else if (currentMode === 'maintenance') {
+                        if (currentMaintenanceMetric === 'm_accident') barColor = val > avgValue ? dangerColor : safeColor;
+                        else if (currentMaintenanceMetric === 'maintenance_rate') barColor = val < avgValue ? dangerColor : accentColor;
+                    }
+                    return { value: val, itemStyle: { color: barColor } };
+                }),
+                label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: isPercentage ? '{c}%' : '{c}', fontSize: 12 * globalFontScale },
+                markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `4月平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
+            }
+        ];
+    }
+
+    barChart.setOption({
+        title: { text: chartTitle + (showVariance ? ' - 較上月變動' : ' - 本月數值'), left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor }, formatter: (p) => { let h = `<div style="font-weight:bold;margin-bottom:5px;">${p[0].axisValue}</div>`; p.forEach(x => { h += `${x.marker} ${x.seriesName}: <b style="color:${x.color}">${(x.value > 0 && showVariance ? '+' : '')}${x.value}${isPercentage ? '%' : ''}</b><br/>`; }); return h; } },
+        legend: { show: !showVariance, data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: textColor, fontSize: 12 * globalFontScale } },
+        grid: { left: '3%', right: '8%', bottom: '15%', top: '15%', containLabel: true },
+        xAxis: { type: 'category', data: regions, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
+        yAxis: { type: 'value', min: (v) => (isPercentage && !showVariance) ? Math.max(0, Math.floor(v.min - 5)) : null, axisLabel: { color: textColor, formatter: isPercentage ? '{value} %' : '{value}', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
+        series: seriesConfig
+    }, true);
+}
+
 function renderDataView() {
     const container = document.getElementById('data-view-container');
     let title = document.querySelector('.top-nav button.active').innerText;
@@ -408,7 +565,6 @@ function renderDataView() {
     html += '<table class="clean-data-table"><thead><tr>';
     const trStr = (r) => `<tr id="row-${r.region}" onclick="highlightRow('${r.region}')" ondblclick="handleRowDblClick('${r.region}')">`;
 
-    // 🌟 在這裡將 `<th>` 加上 onclick 事件與 clickable-th 類別
     if (currentMode === 'stats') {
         let th = (key, label) => `<th class="${currentStatsMetric === key ? 'active-col' : 'clickable-th'}" onclick="triggerSubMetric('${key}')">${label}</th>`;
         html += `<th>縣市</th><th>綜合分數</th>${th('station', '場站妥善度')}${th('appearance', '外觀標示')}${th('functionality', '重要機能')}${th('ems', 'EMS維護率')}${th('operability', '可動率')}</tr></thead><tbody>`;
@@ -469,6 +625,73 @@ function renderDataView() {
     container.innerHTML = html;
 }
 
+function renderFleetDetails() {
+    const container = document.getElementById('fleet-detail-grid');
+    const simContainer = document.getElementById('sim-detail-grid');
+    let htmlFleet = '', htmlSim = '';
+    rawData.forEach(item => {
+        htmlFleet += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;"><span>3月:</span><span>${item.m_fleet_feb.toLocaleString()}</span></div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--accent-color); font-weight: bold;"><span>4月:</span><span>${item.m_fleet.toLocaleString()}</span></div></div>`;
+        htmlSim += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="font-size: 16px; color: var(--accent-color); font-weight: bold;">${item.sim_total.toLocaleString()} 輛</div></div>`;
+    });
+    container.innerHTML = htmlFleet;
+    simContainer.innerHTML = htmlSim;
+}
+
+function toggleFleetDetails() {
+    showingFleetDetails = !showingFleetDetails;
+    document.getElementById('fleet-summary').classList.toggle('hidden', showingFleetDetails);
+    document.getElementById('fleet-details').classList.toggle('hidden', !showingFleetDetails);
+    document.getElementById('fleet-title-hint').innerText = showingFleetDetails ? '(點擊收合回總計)' : '(點擊展開各縣市明細)';
+}
+
+function toggleSimDetails() {
+    showingSimDetails = !showingSimDetails;
+    document.getElementById('sim-summary').classList.toggle('hidden', showingSimDetails);
+    document.getElementById('sim-details').classList.toggle('hidden', !showingSimDetails);
+    document.getElementById('sim-title-hint').innerText = showingSimDetails ? '(點擊收合回總計)' : '(點擊展開各縣市數量)';
+}
+
+function updateLegendBox() {
+    const legendBox = document.getElementById('legend-box-content');
+    if (currentMode === 'stats') {
+        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">地圖綜合分數</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>大於等於 92分</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>90 - 91.9分</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>88 - 89.9分</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>低於 88分</div>`;
+    } else if (currentMode === 'tire') {
+        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">胎壓未達標率</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>0% - 2%</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>3% - 4%</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>5% - 7%</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>大於 7%</div>`;
+    } else if (currentMode === 'operability') {
+        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">場站可動率 (總分扣分)</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>99% ~ 100% (扣 0 分)</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>95% ~ 99% (扣 1~2 分)</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>91% ~ 95% (扣 3~4 分)</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>未達 91% (扣 5 分)</div><div style="margin-top: 5px; color: var(--text-secondary); font-size: 11px;">*計分邏輯：含下不含上</div>`;
+    } else if (currentMode === 'maintenance') {
+        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">一級維護率</div><div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>95% - 100%</div><div class="legend-item"><div class="color-box" style="background: #eab308;"></div>90% - 94.9%</div><div class="legend-item"><div class="color-box" style="background: #f97316;"></div>85% - 89.9%</div><div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>未達 85%</div>`;
+    } else if (currentMode === 'simulation') {
+        let gradeStr = currentSimulationMetric === 'sim_a' ? 'A級' : (currentSimulationMetric === 'sim_b' ? 'B級' : 'C級');
+        let ranges = currentSimulationMetric === 'sim_a' ? ['0% - 3%', '4% - 5%', '6% - 10%', '大於 10%'] : 
+                     (currentSimulationMetric === 'sim_b' ? ['0% - 10%', '11% - 19%', '20% - 25%', '大於 25%'] : 
+                     ['0% - 30%', '31% - 45%', '46% - 55%', '大於 55%']);
+
+        legendBox.innerHTML = `<div style="font-weight: bold; margin-bottom: 8px;">${gradeStr} 異常占比</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--safe-color);"></div>${ranges[0]}</div>
+            <div class="legend-item"><div class="color-box" style="background: #eab308;"></div>${ranges[1]}</div>
+            <div class="legend-item"><div class="color-box" style="background: #f97316;"></div>${ranges[2]}</div>
+            <div class="legend-item"><div class="color-box" style="background: var(--danger-color);"></div>${ranges[3]}</div>
+            <div style="margin-top: 5px; color: var(--text-secondary); font-size: 11px;">*不同異常級別有不同的警示門檻</div>`;
+    }
+}
+
+function setupMapClickEvent() {
+    mapChart.on('click', (p) => {
+        let cr = (p.seriesType === 'map') ? rawData.find(r => r.mapNames.includes(p.name)) : rawData.find(r => r.region === p.name);
+        if (cr) {
+            const panel = document.getElementById('cityDetailPanel');
+            if (currentMode === 'stats') { panel.querySelector('#detail-title').innerText = `${cr.region} 指標細節 (4月)`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>綜合分數:</span><span style="color:var(--accent-color); font-weight:bold;">${cr.overall}</span></div><div class="detail-row"><span>場站妥善度:</span><span>${cr.station}</span></div><div class="detail-row"><span>外觀標示:</span><span>${cr.appearance}</span></div><div class="detail-row"><span>重要機能:</span><span>${cr.functionality}</span></div><div class="detail-row"><span>EMS維護率:</span><span>${cr.ems}%</span></div><div class="detail-row"><span>可動率:</span><span>${cr.operability}%</span></div>`; }
+            else if (currentMode === 'tire') { panel.querySelector('#detail-title').innerText = `${cr.region} 胎壓未達標趨勢`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>26年 04月:</span><span style="color:var(--accent-color); font-weight:bold;">${cr.tire_history[6]}% (${cr.tire_count}輛)</span></div>`; }
+            else if (currentMode === 'operability') { let v = (cr.operability - cr.operability_feb).toFixed(2); panel.querySelector('#detail-title').innerText = `${cr.region} 月度分析`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>4月可動率:</span><span style="color:var(--accent-color); font-weight:bold;">${cr.operability.toFixed(2)}%</span></div><div class="detail-row"><span>變動:</span><span style="color:${v < 0 ? 'var(--danger-color)' : 'var(--safe-color)'}; font-weight:bold;">${v > 0 ? '+' : ''}${v}%</span></div>`; }
+            else if (currentMode === 'maintenance') { panel.querySelector('#detail-title').innerText = `${cr.region} 維護統計`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>事故車:</span><span style="color:var(--danger-color); font-weight:bold;">${cr.m_accident} 輛</span></div><div class="detail-row"><span>維護率:</span><span style="color:var(--accent-color); font-weight:bold;">${cr.maintenance_rate}%</span></div>`; }
+            else if (currentMode === 'simulation') { panel.querySelector('#detail-title').innerText = `${cr.region} 模擬體驗`; panel.querySelector('#detail-content').innerHTML = `<div class="detail-row"><span>A級異常:</span><span style="font-weight:bold;">${cr.sim_a_count} 輛 (${cr.sim_a_ratio}%)</span></div><div class="detail-row"><span>B級異常:</span><span style="font-weight:bold;">${cr.sim_b_count} 輛 (${cr.sim_b_ratio}%)</span></div>`; }
+            panel.style.display = 'block';
+        }
+    });
+    mapChart.getZr().on('click', (e) => { if (!e.target) document.getElementById('cityDetailPanel').style.display = 'none'; });
+}
+
 // 初始化佈局與圖表
 async function initDashboard() {
     try {
@@ -482,7 +705,7 @@ async function initDashboard() {
         renderSubButtons();
         renderFleetDetails(); 
         updateLegendBox();
-        applyLayoutState(); 
+        applyLayoutState(); // 初始化佈局狀態
         
         renderInitialMap();
         updateBarChart();
