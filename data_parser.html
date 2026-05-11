@@ -320,18 +320,24 @@
             }
         ];
 
-        // 🤖 2. 自動分級鑑定器 (升級為：嚴格相等比對)
-        function autoGradeIssue(issueString) {
-            let cleanStr = issueString.trim(); // 清除名稱前後可能多出來的空白，增加容錯率
-            for (let rule of GRADING_RULES) {
-                // 捨棄 includes，改用完全等於 (exactTexts.includes)，保證不誤判
-                if (rule.exactTexts.includes(cleanStr)) {
-                    return rule.grade; 
-                }
-            }
-            return 'unknown'; // 找不到則打入冷宮，交給紅字雷達捕捉
-        }
+        // 🌟 建立極速查表引擎 (Hash Map)
+        const gradeLookupMap = new Map();
+        GRADING_RULES.forEach(rule => {
+            rule.exactTexts.forEach(text => {
+                gradeLookupMap.set(text, rule.grade);
+            });
+        });
 
+        // 🤖 自動分級鑑定器 (升級為：O(1) 極速查表法)
+        function autoGradeIssue(issueString) {
+            let cleanStr = issueString.trim(); 
+            // 🌟 瞬間查表，不需要再用 for 迴圈慢慢找
+            if (gradeLookupMap.has(cleanStr)) {
+                return gradeLookupMap.get(cleanStr);
+            }
+            return 'unknown'; 
+        }
+        
         document.getElementById('csvFileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
