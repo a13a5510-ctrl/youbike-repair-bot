@@ -286,11 +286,17 @@ body.laser-active, body.laser-active * { cursor: none !important; }
 .modal-overlay.hidden { display: none; }
 
 .modal-content {
-    background: var(--bg-color); border: 1px solid var(--accent-color);
-    border-radius: 12px; padding: 25px; 
-    width: 800px; /* 🌟 大幅加寬視窗，防止問題敘述被硬切 */
-    max-width: 95%;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); position: relative;
+    background: var(--bg-color);
+    border: 1px solid var(--accent-color);
+    border-radius: 12px;
+    padding: 25px; 
+    width: auto;              /* 🌟 改為 auto，讓它能跟著內容縮放 */
+    min-width: 500px;         /* 設定一個保底寬度 */
+    max-width: 95%;           /* 防止超出螢幕 */
+    max-height: 80vh;         /* 防止垂直太長 */
+    overflow-y: auto;         /* 垂直太長時出現捲軸 */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    position: relative;
     animation: fadeIn 0.3s ease;
 }
 
@@ -317,9 +323,14 @@ body.laser-active, body.laser-active * { cursor: none !important; }
     font-size: 16px;
     color: var(--text-primary);
     display: flex;
-    align-items: flex-start;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    align-items: center;       /* 🌟 改為居中對齊，單行比較好看 */
     line-height: 1.5;
+    
+    /* --- 核心修復屬性 --- */
+    white-space: nowrap;      /* 🌟 核心：禁止文字自動換行 */
+    width: max-content;       /* 🌟 核心：讓底色框跟著文字長度跑 */
+    min-width: 100%;          /* 🌟 核心：至少跟視窗一樣寬 */
+    box-sizing: border-box;
 }
 #simModalBody li::before {
     content: "👉";
