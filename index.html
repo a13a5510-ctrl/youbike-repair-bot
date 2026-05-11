@@ -137,6 +137,23 @@
         </div>
     </div>
 
+    <button id="helpFabBtn" class="help-fab" title="系統操作手冊">❓</button>
+    <div id="helpModal" class="modal-overlay hidden">
+        <div class="modal-content glass-modal zoom-target">
+            <h3 style="color: var(--accent-color); margin-top: 0; border-bottom: 1px dashed rgba(148, 163, 184, 0.3); padding-bottom: 10px;">✨ 系統功能操作指南</h3>
+            <ul class="help-list">
+                <li><span class="help-icon">🔀</span><strong>視圖配置：</strong>點擊頂部工具列按鈕，可循環切換「雙拼視圖 / 滿版左區 / 滿版右區」。</li>
+                <li><span class="help-icon">🔍</span><strong>畫面縮放：</strong>透過頂部「A+ / A-」拉環，可無段調整整體介面與字體大小，適應各尺寸螢幕。</li>
+                <li><span class="help-icon">🎯</span><strong>簡報輔助：</strong>點擊「🔴 雷射筆」可開啟高亮游標；點擊「📺 投影模式」自動進入全螢幕並放大。</li>
+                <li><span class="help-icon">🌗</span><strong>主題切換：</strong>點擊「🌙 深色模式 / 🌞 淺色模式」一鍵切換介面日夜高對比色彩。</li>
+                <li><span class="help-icon">📋</span><strong>報表展開：</strong>點擊地圖區右上角「📋 切換數據報表」，可將地圖翻轉為詳細數據清單。</li>
+                <li><span class="help-icon">🔄</span><strong>透視切換：</strong>點擊圖表區右上角「🔄 較上月變動」，可快速切換圖表的「絕對數值」與「變動差值」。</li>
+                <li><span class="help-icon">🖱️</span><strong>深度互動：</strong>單擊地圖區塊可顯示快覽；<strong>「雙擊」</strong>數據表格內的縣市列，可彈出深度解析視窗。</li>
+            </ul>
+            <button class="modal-close-btn glass-btn" onclick="document.getElementById('helpModal').classList.add('hidden')">我已了解</button>
+        </div>
+    </div>
+    
     <div id="simModal" class="modal-overlay hidden">
         <div class="modal-content zoom-target">
             <h3 id="simModalTitle" style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">異常問題分析</h3>
