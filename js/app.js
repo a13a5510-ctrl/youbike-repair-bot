@@ -297,7 +297,7 @@ window.highlightRow = function(region) {
     });
 };
 
-// 🌟 雙擊彈窗 (雙擊) - 加入動態卡片色彩引擎
+// 🌟 雙擊彈窗 (雙擊) - 加入動態卡片色彩引擎與智能斷句防護
 window.handleRowDblClick = function(region) {
     if (currentMode === 'simulation') {
         const item = rawData.find(r => r.region === region);
@@ -313,10 +313,12 @@ window.handleRowDblClick = function(region) {
             // 標題設定
             document.getElementById('simModalTitle').innerHTML = `${region} <span style="color:${gradeColor}; font-size:18px;">[${grade.toUpperCase()}級: ${gradeDesc}]</span>`;
             
-            // 🌟 將每個問題獨立包裝成 li，並加上動態左側高光邊框 (border-left)
-            let probs = item.top_problems[grade].split('、').map(p => 
-                `<li style="border-left: 5px solid ${gradeColor};">${p}</li>`
-            ).join('');
+            // 🌟 核心升級：使用正則表達式的「後行斷言 (Lookbehind)」
+            // 咒語 /(?<=\))、/ 代表：只切斷「前面是右括號」的「、」
+            let probs = item.top_problems[grade]
+                .split(/(?<=\))、/)
+                .map(p => `<li style="border-left: 5px solid ${gradeColor};">${p}</li>`)
+                .join('');
             
             document.getElementById('simModalBody').innerHTML = `<ul>${probs}</ul>`;
             document.getElementById('simModal').classList.remove('hidden');
