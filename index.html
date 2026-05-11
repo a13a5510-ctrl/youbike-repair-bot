@@ -12,6 +12,7 @@
     <div class="header">
         <h1>維修維護提升改善會議 2026/04 資訊</h1>
         <div class="header-tools">
+            
             <button class="header-btn" id="layoutToggleBtn" title="點擊循環切換版面配置">🔀 雙拼視圖</button>
 
             <div class="slider-container" title="調整整體畫面與字體大小">
@@ -38,11 +39,14 @@
 
     <div class="dashboard" id="main-dashboard">
         <div class="panel map-panel" id="map-panel-container">
+            
             <button id="mapDataToggleBtn" class="map-data-toggle hidden hover-expand-btn zoom-target">
                 <span class="btn-icon">📋</span><span class="btn-text" id="mapDataToggleText">切換數據報表</span>
             </button>
+
             <div id="data-view-container" class="data-view-container hidden zoom-target"></div>
             <div class="legend-box zoom-target" id="legend-box-content"></div>
+            
             <div class="floating-base-metrics zoom-target" id="floating-stats-area">
                 <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: var(--text-primary); text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">全國總計基礎施測數據 (2026/04)</div>
                 <div class="base-metrics-grid grid-cols-2">
@@ -52,18 +56,21 @@
                     <div class="metric-card alert"><div class="metric-title">前後胎壓未達標</div><div class="metric-value">83 輛 (4.1%)</div></div>
                 </div>
             </div>
+
             <div class="city-detail-panel zoom-target" id="cityDetailPanel">
                 <h4 id="detail-title">選擇縣市</h4>
                 <div id="detail-content"></div>
             </div>
             <div id="loading" class="loading-text">載入衛星地圖數據中...</div>
-            <div id="mapChart" class="chart-container" style="opacity: 0;"></div>
+            <div id="mapChart" class="chart-container" style="opacity: 0; transition: opacity 0.5s;"></div>
         </div>
 
         <div class="panel chart-panel" id="right-chart-panel" style="overflow-y: auto; position: relative;">
+            
             <button id="varianceToggleBtn" class="variance-toggle-btn zoom-target hidden hover-expand-btn">
                 <span class="btn-icon">🔄</span><span class="btn-text" id="varianceToggleText">較上月變動</span>
             </button>
+
             <div class="base-metrics-wrapper hidden zoom-target" id="maintenance-metrics-area">
                 <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary);">全國營運車輛數對比 <span id="fleet-title-hint" onclick="toggleFleetDetails()" style="font-size: 12px; color: var(--accent-color); cursor: pointer;">(點擊展開各縣市明細)</span></div>
                 <div id="fleet-summary" class="base-metrics-grid grid-cols-2 cursor-pointer" onclick="toggleFleetDetails()">
@@ -72,6 +79,7 @@
                 </div>
                 <div id="fleet-details" class="hidden cursor-pointer" onclick="toggleFleetDetails()"><div class="base-metrics-grid grid-cols-5" id="fleet-detail-grid"></div></div>
             </div>
+
             <div class="base-metrics-wrapper hidden zoom-target" id="simulation-metrics-area">
                 <div style="font-size: 15px; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary);">全國異常車輛數總計 <span id="sim-title-hint" onclick="toggleSimDetails()" style="font-size: 12px; color: var(--accent-color); cursor: pointer;">(點擊展開各縣市數量)</span></div>
                 <div id="sim-summary" class="base-metrics-grid cursor-pointer" style="grid-template-columns: 1fr;" onclick="toggleSimDetails()">
@@ -79,23 +87,51 @@
                 </div>
                 <div id="sim-details" class="hidden cursor-pointer" onclick="toggleSimDetails()"><div class="base-metrics-grid grid-cols-5" id="sim-detail-grid"></div></div>
             </div>
+
             <div id="barChart" class="chart-container"></div>
+
             <div id="maintenance-info-area" class="hidden zoom-target" style="flex: 1; padding: 10px;">
                 <h3 style="color: var(--text-primary); margin-top: 0; margin-bottom: 15px;">一級維修 檢測與行動方案說明</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <div class="info-card"><h4>📌 異常排除定義</h4><ul><li><strong>事故車：</strong>尚有爭議未排除為不可修，排除一級維修計算。</li><li><strong>故障車：</strong>將影響車輛整體上線率。</li></ul></div>
-                    <div class="info-card"><h4>🔻 C級異常常見原因</h4><ul><li>檢測人員勾選標籤不明</li><li>未填日期/人員</li><li>未撕除舊貼紙</li><li style="color: var(--danger-color); font-weight: bold;">比對 EMS 不同日</li><li><span class="highlight-text">未貼標籤</span></li></ul></div>
+                    <div class="info-card">
+                        <h4>📌 異常排除定義</h4>
+                        <ul><li><strong>事故車：</strong>尚有爭議未排除為不可修，排除一級維修計算。</li><li><strong>故障車：</strong>將影響車輛整體上線率。</li></ul>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔻 C級異常常見原因</h4>
+                        <ul><li>檢測人員勾選標籤不明</li><li>未填日期/人員</li><li>未撕除舊貼紙</li><li style="color: var(--danger-color); font-weight: bold;">比對 EMS 不同日</li><li><span class="highlight-text">未貼標籤</span></li></ul>
+                    </div>
                 </div>
                 <div class="info-card">
                     <h4>📊 一級維護率 評分扣分標準</h4>
                     <div style="display: flex; gap: 15px;">
-                        <table class="info-table"><tr><th colspan="2" class="highlight">一級維護率 90% 標準</th></tr><tr><td>100% ~ 90%</td><td>0 分</td></tr><tr><td>未達 90% ~ 85%</td><td>-1 分</td></tr><tr><td>未達 85% ~ 80%</td><td>-2 分</td></tr><tr><td>未達 80% ~ 75%</td><td>-3 分</td></tr><tr><td>未達 75% ~ 70%</td><td>-4 分</td></tr><tr><td style="color: var(--danger-color); font-weight:bold;">未達 70%</td><td style="color: var(--danger-color); font-weight:bold;">-5 分</td></tr></table>
-                        <table class="info-table"><tr><th colspan="2" class="highlight">一級維護率 100% 標準</th></tr><tr><td>100% ~ 90%</td><td>-1 分</td></tr><tr><td>未達 90% ~ 85%</td><td>-2 分</td></tr><tr><td>未達 85% ~ 80%</td><td>-3 分</td></tr><tr><td>未達 80% ~ 75%</td><td>-4 分</td></tr><tr><td style="color: var(--danger-color); font-weight:bold;">未達 75%</td><td style="color: var(--danger-color); font-weight:bold;">-5 分</td></tr></table>
+                        <table class="info-table">
+                            <tr><th colspan="2" class="highlight">一級維護率 90% 標準</th></tr>
+                            <tr><td>100% ~ 90%</td><td>0 分</td></tr>
+                            <tr><td>未達 90% ~ 85%</td><td>-1 分</td></tr>
+                            <tr><td>未達 85% ~ 80%</td><td>-2 分</td></tr>
+                            <tr><td>未達 80% ~ 75%</td><td>-3 分</td></tr>
+                            <tr><td>未達 75% ~ 70%</td><td>-4 分</td></tr>
+                            <tr><td style="color: var(--danger-color); font-weight:bold;">未達 70%</td><td style="color: var(--danger-color); font-weight:bold;">-5 分</td></tr>
+                        </table>
+                        <table class="info-table">
+                            <tr><th colspan="2" class="highlight">一級維護率 100% 標準</th></tr>
+                            <tr><td>100% ~ 90%</td><td>-1 分</td></tr>
+                            <tr><td>未達 90% ~ 85%</td><td>-2 分</td></tr>
+                            <tr><td>未達 85% ~ 80%</td><td>-3 分</td></tr>
+                            <tr><td>未達 80% ~ 75%</td><td>-4 分</td></tr>
+                            <tr><td style="color: var(--danger-color); font-weight:bold;">未達 75%</td><td style="color: var(--danger-color); font-weight:bold;">-5 分</td></tr>
+                        </table>
                     </div>
                 </div>
                 <div class="info-card" style="margin-bottom: 0;">
                     <h4>🚀 改善對策與時程</h4>
-                    <table class="info-table" style="text-align: left;"><tr><th style="width: 25%; text-align: center;">方案</th><th>執行內容</th></tr><tr><td style="text-align: center; font-weight: bold;">臨時方案</td><td>以抽樣篩選出日期，90%達成率</td></tr><tr><td style="text-align: center; font-weight: bold;">短中期</td><td>EMS使用標準，以EMS數據比對每台車每月須有一次維修紀錄</td></tr><tr><td style="text-align: center; font-weight: bold; color: var(--accent-color);">長期</td><td>優化EMS系統，列管專案進度追蹤 <span class="highlight-text">(預計5月底測試，6月中上線)</span></td></tr></table>
+                    <table class="info-table" style="text-align: left;">
+                        <tr><th style="width: 25%; text-align: center;">方案</th><th>執行內容</th></tr>
+                        <tr><td style="text-align: center; font-weight: bold;">臨時方案</td><td>以抽樣篩選出日期，90%達成率</td></tr>
+                        <tr><td style="text-align: center; font-weight: bold;">短中期</td><td>EMS使用標準，以EMS數據比對每台車每月須有一次維修紀錄</td></tr>
+                        <tr><td style="text-align: center; font-weight: bold; color: var(--accent-color);">長期</td><td>優化EMS系統，列管專案進度追蹤 <span class="highlight-text">(預計5月底測試，6月中上線)</span></td></tr>
+                    </table>
                 </div>
             </div>
         </div>
@@ -109,25 +145,10 @@
         </div>
     </div>
 
-    <button id="helpFabBtn" class="help-fab" title="系統使用手冊">❓</button>
-    <div id="helpModal" class="modal-overlay hidden">
-        <div class="modal-content zoom-target">
-            <h3 style="color: var(--accent-color); margin-top: 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px;">📖 戰情室系統使用手冊</h3>
-            <ul class="help-list">
-                <li><span class="help-icon">🔀</span><strong>視圖切換：</strong>點擊右上角按鈕循環：雙拼 ➔ 左滿版 ➔ 右滿版。</li>
-                <li><span class="help-icon">📋</span><strong>數據報表：</strong>滑鼠移至地圖右上角可切換為詳細數據表格。</li>
-                <li><span class="help-icon">🖱️</span><strong>雙向連動：</strong>點擊圖表縣市，表格會自動捲動高亮，反之亦然。</li>
-                <li><span class="help-icon">👆</span><strong>雙擊解析：</strong>在「模擬體驗」報表中，雙擊縣市列可彈出異常詳細分析。</li>
-                <li><span class="help-icon">🔄</span><strong>變動率切換：</strong>點擊圖表上方按鈕可切換「本月數值」與「上月趨勢」。</li>
-                <li><span class="help-icon">🗺️</span><strong>地圖快查：</strong>直接點擊地圖縣市，右下角彈出重點數據總覽。</li>
-            </ul>
-            <button class="modal-close-btn" onclick="document.getElementById('helpModal').classList.add('hidden')">我瞭解了</button>
-        </div>
-    </div>
-
     <div id="laser-dot" class="laser-dot"></div>
+
     <script src="js/data.js?v=1.7"></script>
     <script src="js/sim_data.js?v=1.1"></script> 
-    <script src="js/app.js?v=3.5"></script>
+    <script src="js/app.js?v=3.0"></script>
 </body>
 </html>
