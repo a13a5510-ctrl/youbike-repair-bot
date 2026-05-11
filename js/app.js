@@ -297,7 +297,7 @@ window.highlightRow = function(region) {
     });
 };
 
-// 🌟 雙擊彈窗 (雙擊)
+// 🌟 雙擊彈窗 (雙擊) - 加入動態卡片色彩引擎
 window.handleRowDblClick = function(region) {
     if (currentMode === 'simulation') {
         const item = rawData.find(r => r.region === region);
@@ -310,15 +310,19 @@ window.handleRowDblClick = function(region) {
         else if (grade === 'c') { gradeDesc = "一般問題 (內部管理)"; gradeColor = "var(--text-secondary)"; }
 
         if (item && item.top_problems && item.top_problems[grade]) {
+            // 標題設定
             document.getElementById('simModalTitle').innerHTML = `${region} <span style="color:${gradeColor}; font-size:18px;">[${grade.toUpperCase()}級: ${gradeDesc}]</span>`;
             
-            let probs = item.top_problems[grade].split('、').map(p => `<li>${p}</li>`).join('');
-            document.getElementById('simModalBody').innerHTML = `<ul style="padding-left: 20px;">${probs}</ul>`;
+            // 🌟 將每個問題獨立包裝成 li，並加上動態左側高光邊框 (border-left)
+            let probs = item.top_problems[grade].split('、').map(p => 
+                `<li style="border-left: 5px solid ${gradeColor};">${p}</li>`
+            ).join('');
             
+            document.getElementById('simModalBody').innerHTML = `<ul>${probs}</ul>`;
             document.getElementById('simModal').classList.remove('hidden');
         } else {
             document.getElementById('simModalTitle').innerHTML = `${region} - ${grade.toUpperCase()}級異常`;
-            document.getElementById('simModalBody').innerHTML = `<p>此縣市目前無具體問題紀錄。</p>`;
+            document.getElementById('simModalBody').innerHTML = `<p style="padding: 10px; color: var(--text-secondary);">此縣市目前無具體問題紀錄。</p>`;
             document.getElementById('simModal').classList.remove('hidden');
         }
     }
