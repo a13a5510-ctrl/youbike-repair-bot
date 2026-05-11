@@ -277,25 +277,56 @@ body.laser-active, body.laser-active * { cursor: none !important; }
     transition: all 0.3s;
 }
 
-/* --- 🌟 彈跳視窗 Modal --- */
+/* --- 🌟 升級版：彈跳視窗 Modal 與卡片化清單 --- */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
     z-index: 99999; display: flex; justify-content: center; align-items: center;
 }
 .modal-overlay.hidden { display: none; }
+
 .modal-content {
     background: var(--bg-color); border: 1px solid var(--accent-color);
-    border-radius: 12px; padding: 20px; width: 500px; max-width: 90%;
+    border-radius: 12px; padding: 25px; 
+    width: 800px; /* 🌟 大幅加寬視窗，防止問題敘述被硬切 */
+    max-width: 95%;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); position: relative;
     animation: fadeIn 0.3s ease;
 }
+
 .modal-close-btn {
-    margin-top: 20px; width: 100%; padding: 10px; background: var(--panel-bg);
+    margin-top: 25px; width: 100%; padding: 12px; background: var(--panel-bg);
     border: 1px solid var(--border-color); color: var(--text-primary);
     border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s;
+    font-size: 15px;
 }
 .modal-close-btn:hover { background: var(--danger-color); color: #fff; border-color: var(--danger-color); }
+
+/* 🌟 讓問題清單變成精美的獨立卡片，不再擠在一起 */
+#simModalBody ul {
+    padding-left: 0 !important;
+    margin: 0;
+    list-style: none;
+}
+#simModalBody li {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    font-size: 16px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: flex-start;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    line-height: 1.5;
+}
+#simModalBody li::before {
+    content: "👉";
+    margin-right: 12px;
+    font-size: 18px;
+    margin-top: -2px; /* 微調圖示對齊高度 */
+}
 
 /* --- 沉浸式投影模式核心樣式 --- */
 body.full-projection-active { overflow: hidden !important; background: #000 !important; }
