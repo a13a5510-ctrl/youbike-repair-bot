@@ -430,3 +430,58 @@ body.full-projection-active .dashboard {
     margin-bottom: 8px; 
     font-size: 14px; 
 }
+/* ====================================================
+   🌟 主儀表板「絲滑滑動」佈局引擎
+==================================================== */
+
+.dashboard {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    padding: 10px;
+    gap: 10px;
+    /* 取代原本的生硬切換，加上彈性過渡動畫 (0.4秒流暢滑動) */
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panel {
+    background: var(--panel-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 防止視窗在滑動壓縮時，內容擠出去 */
+    /* 讓面板在寬度與內距變化時，產生流暢動畫 */
+    transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease, border 0.3s ease;
+}
+
+/* --- 佈局狀態 1：雙拼視圖 (預設) --- */
+.dashboard.layout-split #map-panel-container { flex: 1; opacity: 1; pointer-events: auto; }
+.dashboard.layout-split #right-chart-panel { flex: 1; opacity: 1; padding: 15px; pointer-events: auto; border: 1px solid var(--border-color); }
+
+/* --- 佈局狀態 2：滿版左區 --- */
+.dashboard.layout-left #map-panel-container { flex: 1; opacity: 1; pointer-events: auto; }
+.dashboard.layout-left #right-chart-panel { 
+    flex: 0 0 0%;    /* 將寬度壓縮到 0，而不是直接 none */
+    opacity: 0;      /* 隱藏內容 */
+    padding: 0; 
+    margin: 0; 
+    border: none; 
+    pointer-events: none; /* 關閉點擊感應 */
+}
+
+/* --- 佈局狀態 3：滿版右區 --- */
+.dashboard.layout-right #map-panel-container { 
+    flex: 0 0 0%;    /* 將寬度壓縮到 0 */
+    opacity: 0; 
+    padding: 0; 
+    margin: 0; 
+    border: none; 
+    pointer-events: none; 
+}
+.dashboard.layout-right #right-chart-panel { flex: 1; opacity: 1; padding: 15px; pointer-events: auto; border: 1px solid var(--border-color); }
+
+/* 隱藏原本舊的生硬切換類別 (若還存在的話) */
+.full-width-map { display: none !important; }
