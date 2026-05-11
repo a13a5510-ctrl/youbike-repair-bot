@@ -47,23 +47,35 @@ body {
 .header h1 { margin: 0; font-size: 20px; color: var(--accent-color); }
 .header-tools { display: flex; gap: 10px; align-items: center; }
 
-/* --- 導覽列與子選單 --- */
-.top-nav, .controls {
+/* --- 導覽列與子選單 (膠囊化優化) --- */
+.top-nav {
     display: flex; gap: 10px; padding: 10px 20px;
     background: var(--bg-color); flex-wrap: wrap;
 }
-.top-nav button, .controls button {
+.top-nav button {
     background: var(--panel-bg); border: 1px solid var(--border-color);
     color: var(--text-secondary); padding: 8px 16px; border-radius: 6px;
     cursor: pointer; transition: all 0.2s; font-weight: 500; font-size: 14px;
 }
-.top-nav button:hover, .controls button:hover {
-    border-color: var(--accent-color); color: var(--accent-color);
-}
-.top-nav button.active, .controls button.active {
+.top-nav button.active {
     background: var(--accent-color); color: #fff; border-color: var(--accent-color);
     box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
+
+.controls {
+    display: flex; gap: 8px; padding: 0 20px 10px 20px;
+    background: var(--bg-color); flex-wrap: wrap; justify-content: center; /* 置中 */
+}
+.controls button {
+    background: rgba(148, 163, 184, 0.1); border: 1px solid transparent;
+    color: var(--text-secondary); padding: 4px 14px; border-radius: 20px; /* 膠囊狀 */
+    cursor: pointer; transition: all 0.2s; font-size: 12px;
+}
+.controls button.active {
+    background: var(--accent-color); color: #fff;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+}
+
 .hidden { display: none !important; }
 
 /* --- 主儀表板與區塊佈局 --- */
@@ -80,21 +92,22 @@ body {
 #right-chart-panel { flex: 1; padding: 15px; transition: flex 0.2s ease-out; }
 .chart-container { flex: 1; width: 100%; min-height: 300px; cursor: pointer; }
 
-/* --- 浮動資訊面板 --- */
+/* --- 浮動資訊面板 (右下角定位修復) --- */
 .legend-box {
     position: absolute; bottom: 20px; left: 20px; z-index: 10;
     background: var(--panel-bg); backdrop-filter: blur(15px);
     border: 1px solid var(--border-color); border-radius: 8px;
     padding: 12px; font-size: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
-.legend-item { display: flex; align-items: center; margin-top: 6px; }
-.color-box { width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; }
 
 .city-detail-panel {
-    position: absolute; top: 20px; left: 20px; z-index: 10;
+    position: absolute !important; 
+    bottom: 20px !important; right: 20px !important; /* 錨定右下 */
+    top: auto !important; left: auto !important;
+    z-index: 45 !important; /* 確保高於數據表 */
     background: var(--panel-bg); backdrop-filter: blur(15px);
-    border: 1px solid var(--border-color); border-radius: 10px;
-    padding: 15px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border: 1px solid var(--accent-color); border-radius: 10px;
+    padding: 15px; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     min-width: 200px; animation: fadeIn 0.3s;
 }
 .city-detail-panel h4 { margin: 0 0 12px 0; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; font-size: 16px; }
@@ -108,253 +121,62 @@ body {
 }
 
 /* --- 數據卡片 --- */
-.base-metrics-wrapper { margin-bottom: 15px; }
-.base-metrics-grid { display: grid; gap: 10px; margin-bottom: 15px; }
-.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-.grid-cols-5 { grid-template-columns: repeat(5, 1fr); gap: 5px; }
-
 .metric-card {
     background: var(--bg-color); border: 1px solid var(--border-color);
     border-radius: 8px; padding: 12px; text-align: center;
 }
-.metric-card.alert { border-color: var(--danger-color); box-shadow: 0 0 8px rgba(244, 63, 94, 0.2); }
-.metric-title { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
 .metric-value { font-size: 18px; font-weight: bold; color: var(--accent-color); }
-.metric-card.alert .metric-value { color: var(--danger-color); }
-
 .hover-glow:hover {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
-    transform: translateY(-2px); transition: all 0.2s;
+    border-color: var(--accent-color); transform: translateY(-2px); transition: all 0.2s;
 }
 
-/* --- 維護補充說明區 --- */
-.info-card { background: rgba(128, 128, 128, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-.info-card h4 { margin: 0 0 10px 0; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-.info-card ul { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; }
-.info-card li { margin-bottom: 5px; }
-.info-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
-.info-table th { background: rgba(56, 189, 248, 0.1); padding: 6px; border: 1px solid var(--border-color); color: var(--text-primary); }
-.info-table td { padding: 6px; border: 1px solid var(--border-color); color: var(--text-secondary); }
-.info-table .highlight { background: rgba(234, 179, 8, 0.2); font-weight: bold; color: var(--warning-color); }
-.alert-banner { background: rgba(244, 63, 94, 0.15); border-left: 4px solid var(--danger-color); padding: 10px 15px; margin-bottom: 15px; border-radius: 0 4px 4px 0; font-size: 14px; font-weight: bold; color: var(--danger-color); }
-.highlight-text { background: rgba(234, 179, 8, 0.2); padding: 2px 4px; border-radius: 4px; font-weight: bold; }
-
-.loading-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--accent-color); font-size: 18px; font-weight: bold; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-/* --- 雙拉環控制台 --- */
-.slider-container {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--panel-bg); border: 1px solid var(--border-color);
-    padding: 0 10px; border-radius: 6px; height: 33px; margin-right: 5px; 
-}
-.slider-container input[type="range"] { width: 60px; cursor: pointer; accent-color: var(--accent-color); }
-.slider-icon { font-size: 14px; }
-.slider-btn { font-size: 14px; font-weight: bold; cursor: pointer; color: var(--text-primary); transition: 0.2s; }
-.slider-btn:hover { color: var(--accent-color); text-shadow: 0 0 8px rgba(56, 189, 248, 0.5); }
-
-/* --- 右上角工具按鈕樣式 --- */
-.header-tools button {
-    border-radius: 6px !important; background: var(--panel-bg);
-    border: 1px solid var(--border-color); color: var(--text-primary);
-    padding: 6px 12px; height: 33px; cursor: pointer; transition: all 0.3s ease;
-}
-.header-tools button:hover { background: rgba(56, 189, 248, 0.15); border-color: var(--accent-color); }
-button.presentation-toggle.active, button.laser-toggle.active {
-    background-color: var(--warning-color) !important; border-color: var(--warning-color) !important;
-    color: #ffffff !important; font-weight: bold; box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); 
-}
-
-/* --- 🌟 完美修復版：懸停展開按鈕特效 (抽屜式) --- */
+/* --- 🌟 抽屜式按鈕 --- */
 .hover-expand-btn {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: flex-start;
-    width: 38px !important; /* 收合時只顯示 Icon */
-    height: 38px;
-    overflow: hidden;
-    white-space: nowrap;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 0 !important; /* 清除 padding 避免擠壓 */
-    box-sizing: border-box;
-    border-radius: 6px;
+    display: inline-flex !important; align-items: center; justify-content: flex-start;
+    width: 38px !important; height: 38px; overflow: hidden; white-space: nowrap;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 0 !important;
+    box-sizing: border-box; border-radius: 6px;
 }
-.hover-expand-btn .btn-icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0; /* 防止圖示被壓縮 */
-}
-.hover-expand-btn .btn-text {
-    opacity: 0;
-    transition: opacity 0.2s;
-    font-size: 13px;
-    padding-right: 15px;
-    font-weight: bold;
-}
-.hover-expand-btn:hover {
-    width: 145px !important; /* 展開時的寬度 */
-}
-.hover-expand-btn:hover .btn-text {
-    opacity: 1;
-}
+.hover-expand-btn .btn-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.hover-expand-btn .btn-text { opacity: 0; transition: opacity 0.2s; font-size: 13px; padding-right: 15px; font-weight: bold; }
+.hover-expand-btn:hover { width: 145px !important; }
+.hover-expand-btn:hover .btn-text { opacity: 1; }
 
-/* 懸停按鈕的位置與顏色 */
-.map-data-toggle {
-    position: absolute; top: 20px; right: 20px; z-index: 30;
-    background: var(--panel-bg); border: 1px solid var(--accent-color);
-    color: var(--accent-color); cursor: pointer; backdrop-filter: blur(10px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-.map-data-toggle:hover { background: var(--accent-color); color: #fff; box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
+.map-data-toggle { position: absolute; top: 20px; right: 20px; z-index: 30; background: var(--panel-bg); border: 1px solid var(--accent-color); color: var(--accent-color); }
+.variance-toggle-btn { position: absolute; top: 15px; right: 20px; z-index: 20; background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-primary); }
 
-.variance-toggle-btn {
-    position: absolute; top: 15px; right: 20px; z-index: 20;
-    background: var(--panel-bg); border: 1px solid var(--border-color);
-    color: var(--text-primary); cursor: pointer; backdrop-filter: blur(10px);
-}
-.variance-toggle-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
-.variance-toggle-btn.active-mode {
-    background: var(--warning-color); color: #fff; border-color: var(--warning-color);
-    box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-}
-
-/* --- 雷射點特效 --- */
-.laser-dot {
-    position: fixed; top: 0; left: 0; width: 16px; height: 16px;
-    background-color: #ff0000; border-radius: 50%; pointer-events: none; z-index: 999999;
-    box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ff0000;
-    opacity: 0; display: none;
-}
-.laser-dot.active { display: block; opacity: 1; }
-body.laser-active, body.laser-active * { cursor: none !important; }
-
-
-/* --- 🌟 數據報表視窗與連動高光 --- */
-.data-view-container {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg-color); z-index: 25; overflow-y: auto;
-    padding: 70px 20px 20px 20px; box-sizing: border-box; animation: fadeIn 0.3s ease-out;
-}
-.clean-data-table {
-    width: 100%; border-collapse: collapse; color: var(--text-primary); font-size: 14px;
-    background: var(--panel-bg); border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-.clean-data-table th {
-    background: rgba(56, 189, 248, 0.15); color: var(--text-primary); font-weight: bold;
-    padding: 12px 10px; text-align: center; border-bottom: 2px solid var(--accent-color);
-    position: sticky; top: 0; z-index: 2; backdrop-filter: blur(10px);
-}
-/* 🌟 確保表格內的文字也不會擠成兩行 */
-.clean-data-table td {
-    padding: 12px 10px;
-    text-align: center;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    
-    /* 加入這兩行 */
-    white-space: nowrap; 
-    overflow: hidden;
-    text-overflow: ellipsis; /* 如果真的太長，顯示... 而不是切成兩行 */
-}
-.clean-data-table tbody tr:hover td { background: rgba(56, 189, 248, 0.1); color: var(--text-primary); }
-
-/* 🌟 極致清晰：直行高光 (追蹤上方選單) */
-.clean-data-table th.active-col {
-    background: var(--accent-color) !important; 
-    color: #ffffff !important;                  
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-.clean-data-table td.active-col {
-    background: rgba(56, 189, 248, 0.12) !important;
-    border-left: 2px solid var(--accent-color); 
-    border-right: 2px solid var(--accent-color);
-    font-weight: bold;
-    color: var(--text-primary);
-}
-.clean-data-table tbody tr:last-child td.active-col { border-bottom: 2px solid var(--accent-color) !important; }
-
-/* 🌟 橫列高光 (與右側折線圖連動雙向點擊) */
+/* --- 🌟 數據報表連動高光 --- */
+.clean-data-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .clean-data-table tbody tr.row-highlight td {
-    background: rgba(244, 63, 94, 0.15) !important;
-    color: var(--danger-color) !important;
-    font-weight: bold;
-    border-bottom: 2px solid var(--danger-color);
-    border-top: 2px solid var(--danger-color);
-    transition: all 0.3s;
+    background: var(--accent-color) !important; color: #ffffff !important; font-weight: bold;
+    border-top: 1px solid #fff; border-bottom: 1px solid #fff; box-shadow: 0 4px 10px rgba(56, 189, 248, 0.4);
 }
 
-/* --- 🌟 升級版：彈跳視窗 Modal 與卡片化清單 --- */
+/* --- 🌟 彈跳視窗與說明手冊 --- */
 .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
     z-index: 99999; display: flex; justify-content: center; align-items: center;
 }
-.modal-overlay.hidden { display: none; }
-
 .modal-content {
-    background: var(--bg-color);
-    border: 1px solid var(--accent-color);
-    border-radius: 12px;
-    padding: 25px; 
-    width: auto;              /* 🌟 改為 auto，讓它能跟著內容縮放 */
-    min-width: 500px;         /* 設定一個保底寬度 */
-    max-width: 95%;           /* 防止超出螢幕 */
-    max-height: 80vh;         /* 防止垂直太長 */
-    overflow-y: auto;         /* 垂直太長時出現捲軸 */
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    position: relative;
-    animation: fadeIn 0.3s ease;
-}
-
-.modal-close-btn {
-    margin-top: 25px; width: 100%; padding: 12px; background: var(--panel-bg);
-    border: 1px solid var(--border-color); color: var(--text-primary);
-    border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s;
-    font-size: 15px;
-}
-.modal-close-btn:hover { background: var(--danger-color); color: #fff; border-color: var(--danger-color); }
-
-/* 🌟 讓問題清單變成精美的獨立卡片，不再擠在一起 */
-#simModalBody ul {
-    padding-left: 0 !important;
-    margin: 0;
-    list-style: none;
+    background: var(--bg-color); border: 1px solid var(--accent-color);
+    border-radius: 12px; padding: 25px; width: auto; min-width: 500px; max-width: 95%; max-height: 85vh;
+    overflow-y: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); position: relative; animation: fadeIn 0.3s ease;
 }
 #simModalBody li {
-    background: var(--panel-bg);
-    border: 1px solid var(--border-color);
-    padding: 14px 18px;
-    margin-bottom: 12px;
-    border-radius: 6px;
-    font-size: 16px;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;       /* 🌟 改為居中對齊，單行比較好看 */
-    line-height: 1.5;
-    
-    /* --- 核心修復屬性 --- */
-    white-space: nowrap;      /* 🌟 核心：禁止文字自動換行 */
-    width: max-content;       /* 🌟 核心：讓底色框跟著文字長度跑 */
-    min-width: 100%;          /* 🌟 核心：至少跟視窗一樣寬 */
-    box-sizing: border-box;
-}
-#simModalBody li::before {
-    content: "👉";
-    margin-right: 12px;
-    font-size: 18px;
-    margin-top: -2px; /* 微調圖示對齊高度 */
+    background: var(--panel-bg); border: 1px solid var(--border-color); padding: 12px 18px;
+    margin-bottom: 10px; border-radius: 6px; font-size: 16px; color: var(--text-primary);
+    display: flex; align-items: center; white-space: nowrap; width: max-content; min-width: 100%;
 }
 
-/* --- 沉浸式投影模式核心樣式 --- */
-body.full-projection-active { overflow: hidden !important; background: #000 !important; }
-body.full-projection-active .header { display: none !important; }
-body.full-projection-active .dashboard {
-    height: 100vh !important; width: 100vw !important;
-    padding: 0 !important; margin: 0 !important;
-    position: fixed; top: 0; left: 0; z-index: 9999;
+.help-fab {
+    position: fixed; bottom: 25px; right: 25px; width: 45px; height: 45px; border-radius: 50%;
+    background: var(--accent-color); color: #fff; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    font-size: 22px; cursor: pointer; z-index: 9999; transition: transform 0.2s; display: flex; justify-content: center; align-items: center;
 }
+.help-fab:hover { transform: scale(1.15); background: #0284c7; }
+.help-list { padding: 0; list-style: none; }
+.help-list li { background: rgba(148, 163, 184, 0.05); border-radius: 6px; padding: 12px; margin-bottom: 8px; font-size: 14px; display: flex; align-items: center; border: 1px solid var(--border-color); }
+.help-list .help-icon { font-size: 18px; margin-right: 12px; width: 25px; text-align: center; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
