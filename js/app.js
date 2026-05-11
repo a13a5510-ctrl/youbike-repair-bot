@@ -59,6 +59,8 @@ function renderSubButtons() {
         if (isActive) btn.classList.add('active');
 
         btn.addEventListener('click', () => {
+            // 🌟 防呆優化：如果點擊的已經是當前正在顯示的按鈕，就直接 return 不做事，避免浪費效能重複繪製！
+            if (btn.classList.contains('active')) return;
             document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
