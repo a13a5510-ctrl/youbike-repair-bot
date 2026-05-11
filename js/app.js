@@ -526,4 +526,11 @@ async function initDashboard() {
 }
 
 initDashboard();
-window.addEventListener('resize', () => { mapChart.resize(); barChart.resize(); });
+let resizeTimer;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+        if(mapChart) mapChart.resize(); 
+        if(barChart) barChart.resize();
+    }, 200); // 等待使用者拖曳停止 0.2 秒後再重繪，大幅節省效能
+});
