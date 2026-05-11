@@ -554,3 +554,12 @@ body.light-mode .glass-modal .help-icon {
     color: #fff !important;
     box-shadow: 0 0 15px rgba(56, 189, 248, 0.5) !important;
 }
+/* --- 🌟 表格標題可點擊連動樣式 --- */
+.clean-data-table th.clickable-th {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.clean-data-table th.clickable-th:hover {
+    color: var(--accent-color) !important;
+    background-color: rgba(56, 189, 248, 0.25) !important;
+}
