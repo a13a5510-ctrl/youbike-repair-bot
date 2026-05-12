@@ -6,11 +6,11 @@ let showingFleetDetails = false;
 let showingSimDetails = false;
 let isDataView = false; 
 let showVariance = false; 
-let isPresentationMode = false; // 🌟 雷射筆與投影狀態宣告
+let isPresentationMode = false; 
 let isLaserMode = false;        
 
-// 🌟 預設為空，讓首頁維持最乾淨的「滿版左側地圖」
-let currentStatsMetric = ''; 
+// 🌟 修改點：將預設指標改為綜合分數
+let currentStatsMetric = 'overall'; 
 let currentMaintenanceMetric = 'maintenance_rate';
 let currentSimulationMetric = 'sim_a';
 
@@ -47,6 +47,11 @@ function injectSimData() {
 }
 injectSimData();
 
+// 🌟 動態注入「綜合分數」到指標清單中 (確保只加入一次)
+if (typeof statsMetrics !== 'undefined' && !statsMetrics.find(m => m.key === 'overall')) {
+    statsMetrics.unshift({ key: 'overall', label: '綜合分數' });
+}
+
 function renderSubButtons() {
     const btnContainer = document.getElementById('button-container');
     btnContainer.innerHTML = ''; 
@@ -58,13 +63,12 @@ function renderSubButtons() {
     metrics.forEach((metric) => {
         const btn = document.createElement('button');
         btn.innerText = metric.label;
-        btn.dataset.key = metric.key; // 🌟 綁定資料密鑰，供表格標題點擊時「隔空呼叫」使用
+        btn.dataset.key = metric.key; 
         
         let isActive = (currentStatsMetric === metric.key && currentMode === 'stats') || (currentMaintenanceMetric === metric.key && currentMode === 'maintenance') || (currentSimulationMetric === metric.key && currentMode === 'simulation');
         if (isActive) btn.classList.add('active');
 
         btn.addEventListener('click', () => {
-            // 防呆優化：如果點擊的已經是當前正在顯示的按鈕，就直接 return
             if (btn.classList.contains('active') && !isDataView) return; 
 
             document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
@@ -101,7 +105,6 @@ function renderSubButtons() {
     });
 }
 
-// 🌟 隔空點穴：表格標題點擊時的連動函數
 window.triggerSubMetric = function(key) {
     const btns = document.querySelectorAll('.controls button');
     for (let b of btns) {
@@ -112,7 +115,6 @@ window.triggerSubMetric = function(key) {
     }
 };
 
-// 導覽列與模式切換
 document.getElementById('nav-stats').addEventListener('click', (e) => switchMode('stats', e.target));
 document.getElementById('nav-tire').addEventListener('click', (e) => switchMode('tire', e.target));
 document.getElementById('nav-operability').addEventListener('click', (e) => switchMode('operability', e.target));
@@ -140,7 +142,7 @@ function switchMode(mode, targetElement) {
     document.getElementById('barChart').classList.remove('hidden');
 
     if (mode === 'stats') {
-        currentStatsMetric = ''; 
+        currentStatsMetric = 'overall'; 
     } else {
         if (mode === 'maintenance') maintMetricsArea.classList.remove('hidden');
         else if (mode === 'simulation') simMetricsArea.classList.remove('hidden');
@@ -159,7 +161,6 @@ function switchMode(mode, targetElement) {
     }
 }
 
-// 🌟 三段佈局切換
 let layoutState = 'split';
 document.getElementById('layoutToggleBtn').addEventListener('click', () => {
     if (layoutState === 'split') layoutState = 'left';
@@ -286,8 +287,6 @@ window.handleRowDblClick = function(region) {
 
         if (item && item.top_problems && item.top_problems[grade]) {
             document.getElementById('simModalTitle').innerHTML = `${region} <span style="color:${gColor}; font-size:18px;">[${grade.toUpperCase()}級: ${gDesc}]</span>`;
-            
-            // 🌟 終極安全斷句法：使用標準 Split 而非 Lookbehind 正則，保證 100% 瀏覽器相容，不再出錯白屏！
             let probsArray = item.top_problems[grade].split(')、');
             let probs = probsArray.map((p, index) => {
                 let text = index === probsArray.length - 1 ? p : p + ')';
@@ -306,28 +305,24 @@ window.handleRowDblClick = function(region) {
 
 barChart.on('click', (params) => { let r = currentMode === 'tire' ? params.seriesName : params.name; if (r) highlightRow(r); });
 
-// 手冊控制與點擊外部關閉
 const helpFabBtn = document.getElementById('helpFabBtn');
 if (helpFabBtn) {
     helpFabBtn.addEventListener('click', () => document.getElementById('helpModal').classList.remove('hidden'));
 }
 document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', (e) => { if(e.target.classList.contains('modal-overlay')) e.target.classList.add('hidden'); }));
 
-// 工具列與地圖
 document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     isLightMode = !isLightMode; document.body.classList.toggle('light-mode', isLightMode);
     e.target.innerText = isLightMode ? '🌙 深色模式' : '🌞 淺色模式';
     updateMapTheme(); if(currentMode !== 'maintenance' || currentMaintenanceMetric !== 'm_info') updateBarChart(); 
 });
 
-// 字體縮放
 window.adjustZoom = (val) => { document.getElementById('fontSizeSlider').value = val; document.getElementById('fontSizeSlider').dispatchEvent(new Event('input')); };
 document.getElementById('fontSizeSlider').addEventListener('input', (e) => {
     globalFontScale = parseFloat(e.target.value); document.querySelectorAll('.zoom-target').forEach(el => el.style.zoom = globalFontScale);
     updateMapTheme(); updateBarChart();
 });
 
-// 投影模式
 const presentationBtn = document.getElementById('presentationToggleBtn');
 if (presentationBtn) {
     presentationBtn.addEventListener('click', async () => {
@@ -343,7 +338,6 @@ if (presentationBtn) {
     });
 }
 
-// 雷射筆
 const laserDot = document.getElementById('laser-dot');
 const laserToggleBtn = document.getElementById('laserToggleBtn');
 if (laserToggleBtn && laserDot) {
@@ -355,9 +349,9 @@ if (laserToggleBtn && laserDot) {
     document.addEventListener('mousemove', (e) => { if (isLaserMode) laserDot.style.transform = `translate(${e.clientX - 8}px, ${e.clientY - 8}px)`; });
 }
 
-// 🌟 ECharts 核心：取消所有壓縮，保證程式穩定運行
+// 🌟 核心：確保地圖也能動態根據目前選中的子指標改變顏色！
 function getMapValue(item) {
-    if (currentMode === 'stats') return item.overall;
+    if (currentMode === 'stats') return item[currentStatsMetric] || item.overall;
     else if (currentMode === 'tire') return item.tire_history[6]; 
     else if (currentMode === 'operability') return item.operability;
     else if (currentMode === 'maintenance') return item.maintenance_rate; 
@@ -427,7 +421,6 @@ function updateMapTheme() {
 function updateBarChart() {
     if (!twGeoJson) return;
     if (currentMode === 'maintenance' && currentMaintenanceMetric === 'm_info') return;
-    // 🌟 預防首頁空指標報錯，保護圖表不崩潰
     if (currentMode === 'stats' && currentStatsMetric === '') return; 
     
     const style = getComputedStyle(document.body);
@@ -567,11 +560,12 @@ function renderDataView() {
 
     if (currentMode === 'stats') {
         let th = (key, label) => `<th class="${currentStatsMetric === key ? 'active-col' : 'clickable-th'}" onclick="triggerSubMetric('${key}')">${label}</th>`;
-        html += `<th>縣市</th><th>綜合分數</th>${th('station', '場站妥善度')}${th('appearance', '外觀標示')}${th('functionality', '重要機能')}${th('ems', 'EMS維護率')}${th('operability', '可動率')}</tr></thead><tbody>`;
+        // 🌟 更新點 1：將綜合分數加入表格欄位，並設定可點擊連動
+        html += `<th>縣市</th>${th('overall', '綜合分數')}${th('station', '場站妥善度')}${th('appearance', '外觀標示')}${th('functionality', '重要機能')}${th('ems', 'EMS維護率')}${th('operability', '可動率')}</tr></thead><tbody>`;
         rawData.forEach(r => {
             let cl = (key) => currentStatsMetric === key ? 'class="active-col"' : '';
             html += `${trStr(r)}<td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
-                <td style="color:var(--accent-color);font-weight:bold;">${r.overall} 分</td>
+                <td ${cl('overall')} style="color:var(--accent-color);font-weight:bold;">${r.overall} 分</td>
                 <td ${cl('station')}>${r.station} 分</td><td ${cl('appearance')}>${r.appearance} 分</td>
                 <td ${cl('functionality')}>${r.functionality} 分</td><td ${cl('ems')}>${r.ems}%</td><td ${cl('operability')}>${r.operability}%</td></tr>`;
         });
@@ -705,7 +699,7 @@ async function initDashboard() {
         renderSubButtons();
         renderFleetDetails(); 
         updateLegendBox();
-        applyLayoutState(); // 初始化佈局狀態
+        applyLayoutState(); 
         
         renderInitialMap();
         updateBarChart();
