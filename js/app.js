@@ -546,6 +546,7 @@ function updateBarChart() {
     }, true);
 }
 
+// 🌟 核心：透過 HTML 標籤點擊呼叫對應按鈕，並加入高級雙層微排版
 function renderDataView() {
     const container = document.getElementById('data-view-container');
     let title = document.querySelector('.top-nav button.active').innerText;
@@ -560,12 +561,24 @@ function renderDataView() {
 
     if (currentMode === 'stats') {
         let th = (key, label) => `<th class="${currentStatsMetric === key ? 'active-col' : 'clickable-th'}" onclick="triggerSubMetric('${key}')">${label}</th>`;
-        // 🌟 更新點 1：將綜合分數加入表格欄位，並設定可點擊連動
         html += `<th>縣市</th>${th('overall', '綜合分數')}${th('station', '場站妥善度')}${th('appearance', '外觀標示')}${th('functionality', '重要機能')}${th('ems', 'EMS維護率')}${th('operability', '可動率')}</tr></thead><tbody>`;
         rawData.forEach(r => {
             let cl = (key) => currentStatsMetric === key ? 'class="active-col"' : '';
+            
+            // 🌟 大師級微排版：計算與上月的差異，並設定趨勢顏色與箭頭
+            let diff = (r.overall - r.overall_feb).toFixed(2);
+            let diffIcon = diff > 0 ? '▲' : (diff < 0 ? '▼' : '-');
+            let diffColor = diff > 0 ? 'var(--safe-color)' : (diff < 0 ? 'var(--danger-color)' : 'var(--text-secondary)');
+
             html += `${trStr(r)}<td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
-                <td ${cl('overall')} style="color:var(--accent-color);font-weight:bold;">${r.overall} 分</td>
+                <td ${cl('overall')}>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.3;">
+                        <span style="color:var(--accent-color); font-weight:bold; font-size: 14px;">${r.overall} 分</span>
+                        <span style="font-size: 11px; color: var(--text-secondary); font-weight: normal; letter-spacing: 0.5px;">
+                            上月 ${r.overall_feb} <span style="color: ${diffColor}; margin-left: 2px; font-size: 10px;">${diffIcon}</span>
+                        </span>
+                    </div>
+                </td>
                 <td ${cl('station')}>${r.station} 分</td><td ${cl('appearance')}>${r.appearance} 分</td>
                 <td ${cl('functionality')}>${r.functionality} 分</td><td ${cl('ems')}>${r.ems}%</td><td ${cl('operability')}>${r.operability}%</td></tr>`;
         });
