@@ -475,7 +475,7 @@ function updateBarChart() {
                 name: item.region, type: 'line', data: item.tire_history.slice(1), smooth: true, symbol: isBad ? 'circle' : 'none', symbolSize: 8,
                 lineStyle: { width: isBad ? 4 : 2, opacity: isBad ? 1 : 0.4 }, itemStyle: { color: lineColor },
                 emphasis: { focus: 'series', lineStyle: { width: 7, shadowBlur: 15, shadowColor: lineColor, opacity: 1 }, label: { show: true, fontSize: 16 * globalFontScale, fontWeight: 'bold' } },
-                label: { show: false }, endLabel: { show: true, formatter: '{a} {c}%', color: 'inherit', fontSize: (isBad ? 14 : 11) * globalFontScale, fontWeight: isBad ? 'bold' : 'normal' },
+                label: { show: false }, endLabel: { show: true, formatter: '{a} {c}%', color: 'inherit', fontSize: (isBad ? 14 : 11) * globalFontScale * dataFontBoost, fontWeight: isBad ? 'bold' : 'normal' },
                 labelLayout: { moveOverlap: 'shiftY' }, zlevel: isBad ? 10 : 1
             });
         });
@@ -542,7 +542,7 @@ function updateBarChart() {
         seriesConfig = [{
             name: '較上月變動', type: 'bar', barWidth: '40%', itemStyle: { borderRadius: [4, 4, 0, 0] },
             data: varianceValues.map(val => ({ value: val, itemStyle: { color: getVarColor(val) } })),
-            label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: val => (val.value > 0 ? '+' : '') + val.value + (isPercentage?'%':''), fontSize: 13 * globalFontScale },
+            label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: val => (val.value > 0 ? '+' : '') + val.value + (isPercentage?'%':''), fontSize: 13 * globalFontScale * dataFontBoost },
             markLine: { symbol: 'none', data: [{ type: 'average', name: '平均變動' }], label: { formatter: `平均\n${avgValue > 0 ? '+':''}${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
         }];
     } else {
@@ -560,7 +560,7 @@ function updateBarChart() {
                     }
                     return { value: val, itemStyle: { color: barColor } };
                 }),
-                label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: isPercentage ? '{c}%' : '{c}', fontSize: 12 * globalFontScale },
+                label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: isPercentage ? '{c}%' : '{c}', fontSize: 12 * globalFontScale * dataFontBoost },
                 markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `4月平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
             }
         ];
