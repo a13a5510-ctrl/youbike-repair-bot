@@ -8,6 +8,8 @@ let isDataView = false;
 let showVariance = false; 
 let isPresentationMode = false; 
 let isLaserMode = false;        
+let isDataZoomed = false; // 數字放大狀態
+let dataFontBoost = 1;    // 數字放大倍率
 
 // 🌟 修改點：將預設指標改為綜合分數
 let currentStatsMetric = 'overall'; 
@@ -311,6 +313,35 @@ if (helpFabBtn) {
 }
 document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', (e) => { if(e.target.classList.contains('modal-overlay')) e.target.classList.add('hidden'); }));
 
+// 🌟 劇院模式 (收合選單) 控制
+document.getElementById('zenToggleBtn').addEventListener('click', () => {
+    document.body.classList.add('zen-mode');
+    setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150); // 重新計算圖表空間
+});
+
+document.getElementById('zenRestoreBtn').addEventListener('click', () => {
+    document.body.classList.remove('zen-mode');
+    setTimeout(() => { mapChart.resize(); barChart.resize(); }, 150);
+});
+
+// 🌟 長官護眼術 (數字放大) 控制
+document.getElementById('dataZoomBtn').addEventListener('click', (e) => {
+    isDataZoomed = !isDataZoomed;
+    dataFontBoost = isDataZoomed ? 1.5 : 1; // ECharts 放大 1.5 倍
+    
+    // 設定 CSS 變數，讓表格與數據卡跟著放大
+    document.documentElement.style.setProperty('--data-scale', isDataZoomed ? '1.5' : '1');
+    
+    // 按鈕 UI 變化
+    e.target.innerText = isDataZoomed ? '🔍 還原數字' : '🔎 數字放大';
+    e.target.style.background = isDataZoomed ? 'var(--warning-color)' : 'transparent';
+    e.target.style.color = isDataZoomed ? '#fff' : 'var(--warning-color)';
+    
+    // 重新繪製圖表套用新數字大小
+    updateMapTheme();
+    updateBarChart();
+});
+
 document.getElementById('themeToggleBtn').addEventListener('click', (e) => {
     isLightMode = !isLightMode; document.body.classList.toggle('light-mode', isLightMode);
     e.target.innerText = isLightMode ? '🌙 深色模式' : '🌞 淺色模式';
@@ -410,7 +441,7 @@ function updateMapTheme() {
                     backgroundColor: isLightMode ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.8)', borderColor: isLightMode ? '#94a3b8' : '#334155', borderWidth: 1, padding: [6, 8], borderRadius: 4, 
                     rich: { 
                         region: { color: textColor, fontSize: 13 * globalFontScale, fontWeight: 'bold', align: 'center', padding: [0, 0, 4, 0] }, 
-                        score: { color: accentColor, fontSize: 14 * globalFontScale, fontWeight: 'bold', align: 'center' } 
+                        score: { color: accentColor, fontSize: 14 * globalFontScale * dataFontBoost, fontWeight: 'bold', align: 'center' } 
                     }
                 } 
             }
