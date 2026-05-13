@@ -563,3 +563,67 @@ body.light-mode .glass-modal .help-icon {
     color: var(--accent-color) !important;
     background-color: rgba(56, 189, 248, 0.25) !important;
 }
+/* ====================================================
+   🌟 護眼術：數據獨立放大引擎
+==================================================== */
+:root {
+    --data-scale: 1; /* 預設數字倍率 */
+}
+
+/* 讓表格內的數字根據變數放大 */
+.clean-data-table td {
+    font-size: calc(14px * var(--data-scale));
+    transition: font-size 0.3s ease;
+}
+
+/* 讓數據卡的數字根據變數放大 */
+.metric-value {
+    font-size: calc(18px * var(--data-scale));
+    transition: font-size 0.3s ease;
+}
+.metric-card.alert .metric-value {
+    font-size: calc(18px * var(--data-scale));
+}
+
+/* ====================================================
+   🌟 劇院模式：沉浸式拉環選單
+==================================================== */
+/* 當開啟劇院模式時，隱藏頭部與選單 */
+body.zen-mode .header,
+body.zen-mode .top-nav,
+body.zen-mode .controls {
+    display: none !important;
+}
+
+/* 隱形小拉環設計 */
+.zen-pull-tab {
+    position: fixed;
+    top: 0; 
+    left: 50%; 
+    transform: translateX(-50%);
+    background: var(--accent-color); 
+    color: #fff;
+    padding: 2px 20px; 
+    border-radius: 0 0 10px 10px;
+    cursor: pointer; 
+    z-index: 99999;
+    opacity: 0; 
+    pointer-events: none; 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* 在劇院模式下，拉環呈現半透明待命狀態 */
+body.zen-mode .zen-pull-tab {
+    opacity: 0.4; 
+    pointer-events: auto;
+}
+
+/* 滑鼠移過去時，拉環發光並變大 */
+body.zen-mode .zen-pull-tab:hover {
+    opacity: 1; 
+    padding: 8px 30px; 
+    font-size: 15px;
+}
