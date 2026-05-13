@@ -767,3 +767,59 @@ window.addEventListener('resize', () => {
         if(barChart) barChart.resize();
     }, 200); 
 });
+
+// ====================================================
+// 🌟 全域快捷鍵 (Hotkeys) 監聽法陣
+// ====================================================
+document.addEventListener('keydown', (e) => {
+    // 若未來有輸入框，打字時不觸發快捷鍵
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    const key = e.key.toLowerCase();
+    
+    switch (key) {
+        // 主選單切換
+        case '1': document.getElementById('nav-stats')?.click(); break;
+        case '2': document.getElementById('nav-tire')?.click(); break;
+        case '3': document.getElementById('nav-operability')?.click(); break;
+        case '4': document.getElementById('nav-maintenance')?.click(); break;
+        case '5': document.getElementById('nav-simulation')?.click(); break;
+        
+        // 核心功能操作
+        case 'v': document.getElementById('layoutToggleBtn')?.click(); break;
+        case 'z': document.getElementById('dataZoomBtn')?.click(); break;
+        case 'l': document.getElementById('laserToggleBtn')?.click(); break;
+        case 'f': document.getElementById('presentationToggleBtn')?.click(); break;
+        case 'd': document.getElementById('themeToggleBtn')?.click(); break;
+        
+        // 劇院模式收合 (H = Hide)
+        case 'h': 
+            if (document.body.classList.contains('zen-mode')) {
+                document.getElementById('zenRestoreBtn')?.click();
+            } else {
+                document.getElementById('zenToggleBtn')?.click();
+            }
+            break;
+            
+        // 數據表展開 (T = Table)
+        case 't': 
+            const tBtn = document.getElementById('mapDataToggleBtn');
+            if (tBtn && !tBtn.classList.contains('hidden')) tBtn.click();
+            break;
+            
+        // 變動差值比較 (C = Compare)
+        case 'c': 
+            const cBtn = document.getElementById('varianceToggleBtn');
+            if (cBtn && !cBtn.classList.contains('hidden')) cBtn.click();
+            break;
+            
+        // 說明與退出
+        case '?': 
+            document.getElementById('helpFabBtn')?.click(); 
+            break;
+            
+        case 'escape':
+            document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => m.classList.add('hidden'));
+            break;
+    }
+});
