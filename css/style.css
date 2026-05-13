@@ -627,3 +627,26 @@ body.zen-mode .zen-pull-tab:hover {
     padding: 8px 30px; 
     font-size: 15px;
 }
+/* ====================================================
+   🌟 鍵盤快捷鍵 (Hotkey) 立體視覺標籤
+==================================================== */
+kbd {
+    background-color: rgba(148, 163, 184, 0.2);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 0 var(--border-color);
+    color: var(--accent-color);
+    display: inline-block;
+    font-size: 0.85em;
+    font-weight: bold;
+    padding: 2px 8px;
+    margin: 0 4px;
+    font-family: monospace;
+    vertical-align: middle;
+    letter-spacing: 1px;
+}
+body.light-mode kbd {
+    background-color: #f1f5f9;
+    box-shadow: 0 2px 0 #cbd5e1;
+    border-color: #cbd5e1;
+}
