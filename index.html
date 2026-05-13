@@ -12,9 +12,8 @@
     <div class="header">
         <h1>維修維護提升改善會議 2026/04 資訊</h1>
         <div class="header-tools">
-            <button class="header-btn" id="layoutToggleBtn" title="點擊循環切換版面配置">🔀 雙拼視圖</button>
-
-            <button class="header-btn" id="dataZoomBtn" style="color: var(--warning-color); border-color: var(--warning-color);" title="單獨放大所有數據數字">🔎 數字放大</button>
+            <button class="header-btn" id="layoutToggleBtn" title="點擊循環切換版面配置 (快捷鍵: V)">🔀 雙拼視圖</button>
+            <button class="header-btn" id="dataZoomBtn" style="color: var(--warning-color); border-color: var(--warning-color);" title="單獨放大所有數據數字 (快捷鍵: Z)">🔎 數字放大</button>
 
             <div class="slider-container" title="調整整體畫面與字體大小">
                 <span class="slider-btn" onclick="adjustZoom(2.0)">A+</span>
@@ -22,27 +21,26 @@
                 <span class="slider-btn" onclick="adjustZoom(0.8)">A-</span>
             </div>
 
-            <button class="header-btn" id="zenToggleBtn" title="隱藏上方選單，最大化圖表空間">🔽 收合選單</button>
-
-            <button class="laser-toggle" id="laserToggleBtn" title="開啟雷射筆效果">🔴 雷射筆</button>
-            <button class="presentation-toggle" id="presentationToggleBtn" title="進入/退出全螢幕投影 (F11)">📺 投影模式</button>
-            <button id="themeToggleBtn">🌙 深色模式</button>
+            <button class="header-btn" id="zenToggleBtn" title="隱藏上方選單，最大化圖表空間 (快捷鍵: H)">🔽 收合選單</button>
+            <button class="laser-toggle" id="laserToggleBtn" title="開啟雷射筆效果 (快捷鍵: L)">🔴 雷射筆</button>
+            <button class="presentation-toggle" id="presentationToggleBtn" title="進入/退出全螢幕投影 (快捷鍵: F)">📺 投影模式</button>
+            <button id="themeToggleBtn" title="切換日夜高對比色彩 (快捷鍵: D)">🌙 深色模式</button>
         </div>
     </div>
 
     <div class="top-nav zoom-target">
-        <button class="active" id="nav-stats">施測數據統計</button>
-        <button id="nav-tire">前後胎壓未達標準(6M)</button>
-        <button id="nav-operability">各縣市場站可動率</button>
-        <button id="nav-maintenance">車輛事故與一級維護</button>
-        <button id="nav-simulation">本月模擬體驗數據</button>
+        <button class="active" id="nav-stats" title="(快捷鍵: 1)">施測數據統計</button>
+        <button id="nav-tire" title="(快捷鍵: 2)">前後胎壓未達標準(6M)</button>
+        <button id="nav-operability" title="(快捷鍵: 3)">各縣市場站可動率</button>
+        <button id="nav-maintenance" title="(快捷鍵: 4)">車輛事故與一級維護</button>
+        <button id="nav-simulation" title="(快捷鍵: 5)">本月模擬體驗數據</button>
     </div>
 
     <div class="controls zoom-target" id="button-container"></div>
 
     <div class="dashboard" id="main-dashboard">
         <div class="panel map-panel" id="map-panel-container">
-            <button id="mapDataToggleBtn" class="map-data-toggle hidden hover-expand-btn zoom-target">
+            <button id="mapDataToggleBtn" class="map-data-toggle hidden hover-expand-btn zoom-target" title="(快捷鍵: T)">
                 <span class="btn-icon">📋</span><span class="btn-text" id="mapDataToggleText">切換數據報表</span>
             </button>
             <div id="data-view-container" class="data-view-container hidden zoom-target"></div>
@@ -65,7 +63,7 @@
         </div>
 
         <div class="panel chart-panel" id="right-chart-panel" style="overflow-y: auto; position: relative;">
-            <button id="varianceToggleBtn" class="variance-toggle-btn zoom-target hidden hover-expand-btn">
+            <button id="varianceToggleBtn" class="variance-toggle-btn zoom-target hidden hover-expand-btn" title="(快捷鍵: C)">
                 <span class="btn-icon">🔄</span><span class="btn-text" id="varianceToggleText">較上月變動</span>
             </button>
             <div class="base-metrics-wrapper hidden zoom-target" id="maintenance-metrics-area">
@@ -111,31 +109,34 @@
         <div class="modal-content zoom-target">
             <h3 id="simModalTitle" style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">異常問題分析</h3>
             <div id="simModalBody" style="font-size: 15px; line-height: 1.6; color: var(--text-primary); margin-top: 15px;"></div>
-            <button class="modal-close-btn" onclick="document.getElementById('simModal').classList.add('hidden')">關閉</button>
+            <button class="modal-close-btn" onclick="document.getElementById('simModal').classList.add('hidden')">關閉 (Esc)</button>
         </div>
     </div>
 
-    <button id="helpFabBtn" class="help-fab" title="系統操作手冊">❓</button>
+    <button id="helpFabBtn" class="help-fab" title="系統操作手冊 (快捷鍵: ?)">❓</button>
     <div id="helpModal" class="modal-overlay hidden">
         <div class="modal-content glass-modal zoom-target">
-            <h3 style="color: var(--accent-color); margin-top: 0; border-bottom: 1px dashed rgba(148, 163, 184, 0.3); padding-bottom: 10px;">✨ 系統功能操作指南</h3>
+            <h3 style="color: var(--accent-color); margin-top: 0; border-bottom: 1px dashed rgba(148, 163, 184, 0.3); padding-bottom: 10px;">✨ 系統功能操作與快捷鍵指南</h3>
             <ul class="help-list">
-                <li><span class="help-icon">🔀</span><strong>視圖配置：</strong>點擊頂部工具列按鈕，可循環切換「雙拼視圖 / 滿版左區 / 滿版右區」。</li>
-                <li><span class="help-icon">🔍</span><strong>畫面縮放：</strong>透過頂部「A+ / A-」拉環，可無段調整整體介面與字體大小，適應各尺寸螢幕。</li>
-                <li><span class="help-icon">🎯</span><strong>簡報輔助：</strong>點擊「🔴 雷射筆」可開啟高亮游標；點擊「📺 投影模式」自動進入全螢幕並放大。</li>
-                <li><span class="help-icon">🌗</span><strong>主題切換：</strong>點擊「🌙 深色模式 / 🌞 淺色模式」一鍵切換介面日夜高對比色彩。</li>
-                <li><span class="help-icon">📋</span><strong>報表展開：</strong>點擊地圖區右上角「📋 切換數據報表」，可將地圖翻轉為詳細數據清單。</li>
-                <li><span class="help-icon">🔄</span><strong>透視切換：</strong>點擊圖表區右上角「🔄 較上月變動」，可快速切換圖表的「絕對數值」與「變動差值」。</li>
-                <li><span class="help-icon">🖱️</span><strong>深度互動：</strong>單擊地圖區塊可顯示快覽；<strong>「雙擊」</strong>數據表格內的縣市列，可彈出深度解析視窗。</li>
+                <li><span class="help-icon">🔢</span><strong>主分類切換：</strong>按數字鍵 <kbd>1</kbd> ~ <kbd>5</kbd> 快速切換頂部五大指標。</li>
+                <li><span class="help-icon">🔀</span><strong>視圖配置：</strong>按 <kbd>V</kbd> 鍵可循環切換「雙拼視圖 / 滿版左區 / 滿版右區」。</li>
+                <li><span class="help-icon">🔍</span><strong>數字放大：</strong>按 <kbd>Z</kbd> 鍵可開啟長官護眼模式，單獨將報表與圖表內的數字巨大化。</li>
+                <li><span class="help-icon">🔽</span><strong>劇院模式：</strong>按 <kbd>H</kbd> 鍵隱藏上方工具列與選單，讓圖表空間極致最大化。</li>
+                <li><span class="help-icon">🎯</span><strong>簡報輔助：</strong>按 <kbd>L</kbd> 鍵開啟雷射筆游標；按 <kbd>F</kbd> 鍵自動進入全螢幕並放大 (同 F11)。</li>
+                <li><span class="help-icon">🌗</span><strong>主題切換：</strong>按 <kbd>D</kbd> 鍵一鍵切換介面日夜高對比色彩。</li>
+                <li><span class="help-icon">📋</span><strong>報表展開：</strong>按 <kbd>T</kbd> 鍵可快速將地圖翻轉為詳細數據清單。</li>
+                <li><span class="help-icon">🔄</span><strong>透視切換：</strong>按 <kbd>C</kbd> 鍵快速切換圖表的「絕對數值」與「較上月變動差值」。</li>
+                <li><span class="help-icon">🖱️</span><strong>深度互動：</strong>點擊地圖區塊可顯示快覽；<strong>「雙擊」</strong>數據表格內的縣市，可彈出解析視窗 (<kbd>Esc</kbd> 關閉)。</li>
             </ul>
             <button class="modal-close-btn glass-btn" onclick="document.getElementById('helpModal').classList.add('hidden')">我已了解</button>
         </div>
     </div>
 
-    <div id="zenRestoreBtn" class="zen-pull-tab">🔽 顯示選單</div>
+    <div id="zenRestoreBtn" class="zen-pull-tab" title="(快捷鍵: H)">🔽 顯示選單</div>
+    
     <div id="laser-dot" class="laser-dot"></div>
     <script src="js/data.js?v=1.7"></script>
     <script src="js/sim_data.js?v=1.1"></script> 
-    <script src="js/app.js?v=4.0"></script>
+    <script src="js/app.js?v=4.2"></script>
 </body>
 </html>
