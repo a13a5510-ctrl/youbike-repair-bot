@@ -1,4 +1,40 @@
 // js/app.js
+
+// 🌟 1. 實裝全自動動態月份應答
+let globalYear = window.GLOBAL_YEAR || 2026;
+let globalMonth = window.GLOBAL_MONTH || 4;
+
+if (typeof rawData !== 'undefined' && rawData.length > 0) {
+    if (rawData[0].month) {
+        let mMatch = String(rawData[0].month).match(/(\d{4})[\/\-](\d{1,2})/);
+        if (mMatch) {
+            globalYear = parseInt(mMatch[1], 10);
+            globalMonth = parseInt(mMatch[2], 10);
+        }
+    }
+}
+
+let prevMonth = globalMonth === 1 ? 12 : globalMonth - 1;
+let prevYear = globalMonth === 1 ? globalYear - 1 : globalYear;
+
+let currMonthStr = `${globalMonth}月`;
+let prevMonthStr = `${prevMonth}月`;
+let currYearMonthStr = `${globalYear}/${globalMonth.toString().padStart(2, '0')}`;
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.title = `維修維護提升改善會議 ${currYearMonthStr} 資訊`;
+    let elH1 = document.getElementById('dyn-header-month');
+    if (elH1) elH1.innerText = currYearMonthStr;
+    let elBase = document.getElementById('dyn-base-month');
+    if (elBase) elBase.innerText = currYearMonthStr;
+    let elPrevFleet = document.getElementById('dyn-prev-fleet-month');
+    if (elPrevFleet) elPrevFleet.innerText = `${prevYear}/${prevMonth.toString().padStart(2, '0')}`;
+    let elCurrFleet = document.getElementById('dyn-curr-fleet-month');
+    if (elCurrFleet) elCurrFleet.innerText = currYearMonthStr;
+    let elCurrSim = document.getElementById('dyn-curr-sim-month');
+    if (elCurrSim) elCurrSim.innerText = currYearMonthStr;
+});
+
 let isLightMode = true; 
 let twGeoJson = null;
 let currentMode = 'stats'; 
@@ -462,17 +498,25 @@ function updateBarChart() {
     const safeColor = style.getPropertyValue('--safe-color').trim();
 
     if (currentMode === 'tire') {
-        const sortedData = [...rawData].sort((a, b) => b.tire_history[6] - a.tire_history[6]); 
+        // 🌟 4. 前後胎壓趨勢圖時間滾動對齊
+        const sortedData = [...rawData].sort((a, b) => b.tire_history[b.tire_history.length - 1] - a.tire_history[a.tire_history.length - 1]); 
         const regions = sortedData.map(item => item.region);
-        const months = ['25/11', '25/12', '26/01', '26/02', '26/03', '26/04'];
+        const dynamicMonths = [];
+        for (let i = 5; i >= 0; i--) {
+            let m = globalMonth - i;
+            let y = globalYear;
+            if (m <= 0) { m += 12; y -= 1; }
+            dynamicMonths.push(`${y.toString().slice(-2)}/${m.toString().padStart(2, '0')}`);
+        }
         const dangerColors = ['#e11d48', '#be185d', '#7e22ce', '#b45309', '#a21caf', '#c2410c', '#1d4ed8'];
         let colorIdx = 0; const seriesData = [];
 
         sortedData.forEach((item, index) => {
-            let val = item.tire_history[6]; let isBad = val > 4.5; 
+            let hist = item.tire_history.slice(-6); // 嚴格取最後 6 筆對齊
+            let val = hist[5]; let isBad = val > 4.5; 
             let lineColor = isBad ? dangerColors[colorIdx++ % dangerColors.length] : (isLightMode ? '#94a3b8' : '#475569');
             seriesData.push({
-                name: item.region, type: 'line', data: item.tire_history.slice(1), smooth: true, symbol: isBad ? 'circle' : 'none', symbolSize: 8,
+                name: item.region, type: 'line', data: hist, smooth: true, symbol: isBad ? 'circle' : 'none', symbolSize: 8,
                 lineStyle: { width: isBad ? 4 : 2, opacity: isBad ? 1 : 0.4 }, itemStyle: { color: lineColor },
                 emphasis: { focus: 'series', lineStyle: { width: 7, shadowBlur: 15, shadowColor: lineColor, opacity: 1 }, label: { show: true, fontSize: 16 * globalFontScale, fontWeight: 'bold' } },
                 label: { show: false }, endLabel: { show: true, formatter: '{a} {c}%', color: 'inherit', fontSize: (isBad ? 14 : 11) * globalFontScale * dataFontBoost, fontWeight: isBad ? 'bold' : 'normal' },
@@ -484,7 +528,7 @@ function updateBarChart() {
             title: { text: '全國各縣市前後胎壓未達標趨勢 (近 6 個月)', left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } },
             tooltip: { trigger: 'axis', backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor }, valueFormatter: (value) => value + '%' },
             legend: { show: false }, grid: { left: '3%', right: '12%', bottom: '10%', top: '15%', containLabel: true }, 
-            xAxis: { type: 'category', data: months, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
+            xAxis: { type: 'category', data: dynamicMonths, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
             yAxis: { type: 'value', axisLabel: { color: textColor, formatter: '{value} %', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
             series: seriesData
         }, true);
@@ -547,9 +591,9 @@ function updateBarChart() {
         }];
     } else {
         seriesConfig = [
-            { name: '3月 (前月)', type: 'bar', barWidth: '30%', itemStyle: { color: isLightMode ? '#94a3b8' : '#475569', borderRadius: [4, 4, 0, 0] }, label: { show: false }, data: previousValues },
+            { name: `${prevMonthStr} (前月)`, type: 'bar', barWidth: '30%', itemStyle: { color: isLightMode ? '#94a3b8' : '#475569', borderRadius: [4, 4, 0, 0] }, label: { show: false }, data: previousValues },
             {
-                name: '4月 (當月)', type: 'bar', barWidth: '30%', itemStyle: { borderRadius: [4, 4, 0, 0] },
+                name: `${currMonthStr} (當月)`, type: 'bar', barWidth: '30%', itemStyle: { borderRadius: [4, 4, 0, 0] },
                 data: currentValues.map((val, idx) => {
                     let barColor = accentColor;
                     if (currentMode === 'stats' || currentMode === 'operability') barColor = val < avgValue ? dangerColor : accentColor;
@@ -561,7 +605,7 @@ function updateBarChart() {
                     return { value: val, itemStyle: { color: barColor } };
                 }),
                 label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: isPercentage ? '{c}%' : '{c}', fontSize: 12 * globalFontScale * dataFontBoost },
-                markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `4月平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
+                markLine: { symbol: 'none', data: [{ type: 'average', name: '平均' }], label: { formatter: `${currMonthStr}平均\n${avgValue}${isPercentage?'%':''}`, position: 'end', color: isLightMode ? '#d97706' : '#eab308', fontWeight: 'bold', fontSize: 11 * globalFontScale }, lineStyle: { color: isLightMode ? '#d97706' : '#eab308', type: 'dashed', width: 2 } }
             }
         ];
     }
@@ -569,7 +613,7 @@ function updateBarChart() {
     barChart.setOption({
         title: { text: chartTitle + (showVariance ? ' - 較上月變動' : ' - 本月數值'), left: 'center', textStyle: { color: textColor, fontSize: 15 * globalFontScale } },
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: isLightMode ? 'rgba(255,255,255,0.95)' : 'rgba(15, 23, 42, 0.9)', textStyle: { color: textColor }, formatter: (p) => { let h = `<div style="font-weight:bold;margin-bottom:5px;">${p[0].axisValue}</div>`; p.forEach(x => { h += `${x.marker} ${x.seriesName}: <b style="color:${x.color}">${(x.value > 0 && showVariance ? '+' : '')}${x.value}${isPercentage ? '%' : ''}</b><br/>`; }); return h; } },
-        legend: { show: !showVariance, data: ['3月 (前月)', '4月 (當月)'], bottom: 0, textStyle: { color: textColor, fontSize: 12 * globalFontScale } },
+        legend: { show: !showVariance, data: [`${prevMonthStr} (前月)`, `${currMonthStr} (當月)`], bottom: 0, textStyle: { color: textColor, fontSize: 12 * globalFontScale } },
         grid: { left: '3%', right: '8%', bottom: '15%', top: '15%', containLabel: true },
         xAxis: { type: 'category', data: regions, axisLabel: { color: textColor, fontSize: 12 * globalFontScale }, axisLine: { lineStyle: { color: gridColor } } },
         yAxis: { type: 'value', min: (v) => (isPercentage && !showVariance) ? Math.max(0, Math.floor(v.min - 5)) : null, axisLabel: { color: textColor, formatter: isPercentage ? '{value} %' : '{value}', fontSize: 12 * globalFontScale }, splitLine: { lineStyle: { color: gridColor, type: 'dashed' } } },
@@ -601,30 +645,41 @@ function renderDataView() {
             let diffIcon = diff > 0 ? '▲' : (diff < 0 ? '▼' : '-');
             let diffColor = diff > 0 ? 'var(--safe-color)' : (diff < 0 ? 'var(--danger-color)' : 'var(--text-secondary)');
 
+            // 🌟 3. 補完「綜合分數 (overall)」雙月對比副數字渲染
             html += `${trStr(r)}<td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
                 <td ${cl('overall')}>
                     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.3;">
                         <span style="color:var(--accent-color); font-weight:bold; font-size: 14px;">${r.overall} 分</span>
-                        <span style="font-size: 11px; color: var(--text-secondary); font-weight: normal; letter-spacing: 0.5px;">
-                            上月 ${r.overall_feb} <span style="color: ${diffColor}; margin-left: 2px; font-size: 10px;">${diffIcon}</span>
-                        </span>
+                        <div class="sub-value" style="font-size: 0.85em; color: var(--text-secondary); margin-top: 4px;">
+                            ${prevMonthStr}: ${r.overall_feb} <span style="color: ${diffColor}; margin-left: 2px; font-size: 10px;">${diffIcon}</span>
+                        </div>
                     </div>
                 </td>
                 <td ${cl('station')}>${r.station} 分</td><td ${cl('appearance')}>${r.appearance} 分</td>
                 <td ${cl('functionality')}>${r.functionality} 分</td><td ${cl('ems')}>${r.ems}%</td><td ${cl('operability')}>${r.operability}%</td></tr>`;
         });
     } else if (currentMode === 'tire') {
-        html += '<th>縣市</th><th>25年11月</th><th>25年12月</th><th>26年01月</th><th>26年02月</th><th>26年03月</th><th>26年04月 (當月)</th></tr></thead><tbody>';
+        html += `<th>縣市</th>`;
+        for (let i = 5; i >= 1; i--) {
+            let m = globalMonth - i;
+            let y = globalYear;
+            if (m <= 0) { m += 12; y -= 1; }
+            html += `<th>${y.toString().slice(-2)}年${m.toString().padStart(2, '0')}月</th>`;
+        }
+        html += `<th>${globalYear.toString().slice(-2)}年${globalMonth.toString().padStart(2, '0')}月 (當月)</th></tr></thead><tbody>`;
+        
         rawData.forEach(r => {
-            let v4m = r.tire_history[6];
+            let hist = r.tire_history.slice(-6); // 嚴格擷取最後 6 個月
+            let v4m = hist[5];
             let v4mColor = v4m > 4.5 ? 'var(--danger-color)' : (v4m > 4.0 ? 'var(--warning-color)' : 'var(--safe-color)');
             html += `${trStr(r)}<td style="font-weight:bold;color:var(--text-primary);">${r.region}</td>
-                <td>${r.tire_history[1]}%</td><td>${r.tire_history[2]}%</td><td>${r.tire_history[3]}%</td>
-                <td>${r.tire_history[4]}%</td><td>${r.tire_history[5]}%</td>
+                <td>${hist[0]}%</td><td>${hist[1]}%</td><td>${hist[2]}%</td>
+                <td>${hist[3]}%</td><td>${hist[4]}%</td>
                 <td style="color:${v4mColor};font-weight:bold;">${v4m}% (${r.tire_count}輛)</td></tr>`;
         });
     } else if (currentMode === 'operability') {
-        html += '<th>縣市</th><th>3月可動率</th><th>4月可動率</th><th>月度變動</th></tr></thead><tbody>';
+        // 🌟 2. 動態修復表格表頭 (自動帶入月份變數)
+        html += `<th>縣市</th><th>${prevMonthStr}可動率</th><th>${currMonthStr}可動率</th><th>月度變動</th></tr></thead><tbody>`;
         rawData.forEach(r => {
             let variance = (r.operability - r.operability_feb).toFixed(2);
             let varianceSign = variance > 0 ? '+' : '';
@@ -668,7 +723,7 @@ function renderFleetDetails() {
     const simContainer = document.getElementById('sim-detail-grid');
     let htmlFleet = '', htmlSim = '';
     rawData.forEach(item => {
-        htmlFleet += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;"><span>3月:</span><span>${item.m_fleet_feb.toLocaleString()}</span></div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--accent-color); font-weight: bold;"><span>4月:</span><span>${item.m_fleet.toLocaleString()}</span></div></div>`;
+        htmlFleet += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;"><span>${prevMonthStr}:</span><span>${item.m_fleet_feb.toLocaleString()}</span></div><div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--accent-color); font-weight: bold;"><span>${currMonthStr}:</span><span>${item.m_fleet.toLocaleString()}</span></div></div>`;
         htmlSim += `<div class="metric-card hover-glow" style="padding: 8px;"><div style="font-size: 13px; font-weight: bold; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 6px;">${item.region}</div><div style="font-size: 16px; color: var(--accent-color); font-weight: bold;">${item.sim_total.toLocaleString()} 輛</div></div>`;
     });
     container.innerHTML = htmlFleet;
