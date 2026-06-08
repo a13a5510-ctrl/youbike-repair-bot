@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouBike - CSV ETL 自動轉譯工具</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .container { max-width: 1300px; margin-top: 30px; margin-bottom: 50px; }
+        .upload-zone { 
+            border: 2px dashed #0d6efd; border-radius: 10px; padding: 30px; 
+            text-align: center; background-color: #fff; cursor: pointer; transition: 0.2s;
+            position: relative; overflow: hidden;
+        }
+        .upload-zone:hover { background-color: #e9ecef; }
+        .upload-zone.dragover { background-color: #cff4fc; border-color: #055160; }
+        .upload-zone input[type="file"] {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
+        }
+        .file-status { margin-top: 10px; font-weight: bold; font-size: 0.9rem; }
+        .status-none { color: #6c757d; }
+        .status-loaded { color: #198754; }
+        
+        .preview-table { font-size: 0.85rem; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .preview-table th { background-color: #f1f3f5; color: #495057; white-space: nowrap; }
+        .preview-table td { vertical-align: middle; }
+        .val-changed { font-weight: bold; color: #0d6efd; }
+        
+        .export-btn { font-size: 1.2rem; font-weight: bold; padding: 15px 40px; border-radius: 10px; box-shadow: 0 4px 10px rgba(13,110,253,0.3); }
+        .export-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(13,110,253,0.4); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center mb-2 fw-bold text-dark">🚲 CSV ETL 自動轉譯工具</h2>
+        <p class="text-center text-muted mb-4">嚴格執行：強制降級歷史資料、單區塊讀取最新月、陣列滾動推移，並注入「隱形寄生腳本」更新主儀表板 DOM。</p>
+        
+        <!-- Upload Zones -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="upload-zone" id="drop-eval">
+                    <input type="file" id="file-eval" accept=".csv">
+                    <h5 class="text-primary mb-1">📊 成績與主管自評.csv</h5>
+                    <div class="text-muted small">擷取：綜合分數、妥善、外觀、機能、胎壓</div>
+                    <div class="file-status status-none" id="status-eval">尚未上傳</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="upload-zone" id="drop-operability">
+                    <input type="file" id="file-operability" accept=".csv">
+                    <h5 class="text-success mb-1">🚲 可動率.csv</h5>
+                    <div class="text-muted small">擷取：在站車輛可動率</div>
+                    <div class="file-status status-none" id="status-operability">尚未上傳</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="upload-zone" id="drop-maintenance">
+                    <input type="file" id="file-maintenance" accept=".csv">
+                    <h5 class="text-warning mb-1">🛠️ 一級維護.csv</h5>
+                    <div class="text-muted small">擷取：營運車輛、事故、維護率、維護變動...</div>
+                    <div class="file-status status-none" id="status-maintenance">尚未上傳</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div class="card mb-4 d-none" id="preview-card">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">👀 解析結果預覽與確認</h5>
+                <span class="badge bg-info text-dark" id="target-month-badge">等待解析中</span>
+            </div>
+            <div class="card-body p-0" style="overflow-x: auto;">
+                <table class="table table-bordered table-hover preview-table mb-0" id="preview-table">
+                    <thead>
+                        <tr>
+                            <th>縣市</th>
+                            <th>綜合評分<br>(overall)</th>
+                            <th>場站妥善<br>(station)</th>
+                            <th>外觀標示<br>(appearance)</th>
+                            <th>自行車機能<br>(functionality)</th>
+                            <th>可動率<br>(operability)</th>
+                            <th>EMS維護率<br>(ems)</th>
+                            <th>胎壓未達<br>(tire_count)</th>
+                            <th>事故數<br>(m_accident)</th>
+                            <th>車隊數<br>(m_fleet)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Generated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer text-muted small">
+                * 藍色粗體字代表從 CSV 單一最新區塊中成功提取並覆寫的新數值。<br>
+                * 歷史陣列推移 (Array Shifting) 與舊資料降級 (如 operability_feb) 已於系統背景被安全執行。
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <button class="btn btn-primary export-btn" id="btn-export" disabled>🚀 執行轉譯並下載 data.js</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 基底資料 (預載) ---
+        let baseRawData = [
+            { region: "雙北", mapNames: ["臺北市", "台北市", "新北市"], overall: 89.71, overall_feb: 89.63, station: 95, station_feb: 96, appearance: 87, appearance_feb: 86, functionality: 97, functionality_feb: 98, ems: 84.8, ems_feb: 84.3, operability: 95.85, operability_feb: 95.50, mapCenter: [121.56, 25.03], labelPos: [122.5, 25.3], base: { s: 115, v: 820, e: 128, t: "31 輛 (3.8%)" }, tire_history: [12, 11, 10, 1, 3, 3, 3.8], tire_count: 31, maintenance_rate: 84.83, maintenance_rate_feb: 84.31, m_fleet: 49635, m_fleet_feb: 49635, m_accident: 178, m_accident_feb: 120, m_records: 40837, m_records_feb: 40669, m_var: "+0.52%", sim_total: 820, sim_a_count: 56, sim_a_ratio: 6.8, sim_a_lm: 5.8, sim_a_var: "+1.0%", sim_b_count: 166, sim_b_ratio: 20.2, sim_b_lm: 19.4, sim_b_var: "+0.8%", sim_c_count: 433, sim_c_ratio: 52.8, sim_c_lm: 59.6, sim_c_var: "-6.8%" },
+            { region: "桃園", mapNames: ["桃園市", "桃園縣"], overall: 89.83, overall_feb: 91.45, station: 98, station_feb: 99, appearance: 89, appearance_feb: 84, functionality: 97, functionality_feb: 98, ems: 88.4, ems_feb: 91.5, operability: 92.89, operability_feb: 95.86, mapCenter: [121.21, 24.95], labelPos: [119.5, 25.1], base: { s: 36, v: 248, e: 34, t: "11 輛 (4.4%)" }, tire_history: [9, 9, 11, 3, 4, 3, 4.4], tire_count: 11, maintenance_rate: 88.36, maintenance_rate_feb: 91.53, m_fleet: 12107, m_fleet_feb: 12107, m_accident: 35, m_accident_feb: 24, m_records: 10489, m_records_feb: 10730, m_var: "-3.17%", sim_total: 248, sim_a_count: 14, sim_a_ratio: 5.6, sim_a_lm: 3.7, sim_a_var: "+1.9%", sim_b_count: 40, sim_b_ratio: 16.1, sim_b_lm: 16.3, sim_b_var: "-0.2%", sim_c_count: 107, sim_c_ratio: 43.1, sim_c_lm: 62.0, sim_c_var: "-18.9%" },
+            { region: "新竹", mapNames: ["新竹市", "新竹縣"], overall: 95.41, overall_feb: 93.29, station: 96, station_feb: 80, appearance: 93, appearance_feb: 87, functionality: 98, functionality_feb: 98, ems: 98.3, ems_feb: 94.7, operability: 98.27, operability_feb: 97.27, mapCenter: [121.01, 24.82], labelPos: [119.5, 24.7], base: { s: 14, v: 88, e: 2, t: "3 輛 (3.4%)" }, tire_history: [4, 8, 8, 1, 3, 1, 3.4], tire_count: 3, maintenance_rate: 98.32, maintenance_rate_feb: 94.66, m_fleet: 4796, m_fleet_feb: 4046, m_accident: 21, m_accident_feb: 14, m_records: 4620, m_records_feb: 3722, m_var: "+3.66%", sim_total: 88, sim_a_count: 3, sim_a_ratio: 3.4, sim_a_lm: 3.6, sim_a_var: "-0.2%", sim_b_count: 4, sim_b_ratio: 4.5, sim_b_lm: 9.5, sim_b_var: "-5.0%", sim_c_count: 40, sim_c_ratio: 45.5, sim_c_lm: 65.5, sim_c_var: "-20.0%" },
+            { region: "苗栗", mapNames: ["苗栗縣"], overall: 92.96, overall_feb: 94.48, station: 97, station_feb: 90, appearance: 91, appearance_feb: 93, functionality: 95, functionality_feb: 98, ems: 93.0, ems_feb: 91.0, operability: 97.35, operability_feb: 98.15, mapCenter: [120.82, 24.56], labelPos: [119.5, 24.3], base: { s: 7, v: 50, e: 2, t: "4 輛 (8.0%)" }, tire_history: [0, 0, 0, 2, 3, 8, 8.0], tire_count: 4, maintenance_rate: 92.97, maintenance_rate_feb: 91.04, m_fleet: 2500, m_fleet_feb: 2500, m_accident: 21, m_accident_feb: 9, m_records: 2276, m_records_feb: 2252, m_var: "+1.93%", sim_total: 50, sim_a_count: 5, sim_a_ratio: 10.0, sim_a_lm: 4.0, sim_a_var: "+6.0%", sim_b_count: 2, sim_b_ratio: 4.0, sim_b_lm: 0.0, sim_b_var: "+4.0%", sim_c_count: 33, sim_c_ratio: 66.0, sim_c_lm: 58.0, sim_c_var: "+8.0%" },
+            { region: "台中", mapNames: ["臺中市", "台中市"], overall: 96.46, overall_feb: 94.21, station: 98, station_feb: 95, appearance: 92, appearance_feb: 89, functionality: 99, functionality_feb: 99, ems: 93.4, ems_feb: 99.8, operability: 99.47, operability_feb: 98.63, mapCenter: [120.67, 24.14], labelPos: [119.5, 23.9], base: { s: 32, v: 259, e: 59, t: "10 輛 (3.9%)" }, tire_history: [13, 1, 2, 0, 3, 3, 3.9], tire_count: 10, maintenance_rate: 93.44, maintenance_rate_feb: 99.83, m_fleet: 12987, m_fleet_feb: 12987, m_accident: 58, m_accident_feb: 49, m_records: 11870, m_records_feb: 12647, m_var: "-6.39%", sim_total: 259, sim_a_count: 9, sim_a_ratio: 3.5, sim_a_lm: 3.9, sim_a_var: "-0.4%", sim_b_count: 20, sim_b_ratio: 7.7, sim_b_lm: 10.9, sim_b_var: "-3.2%", sim_c_count: 122, sim_c_ratio: 47.1, sim_c_lm: 52.1, sim_c_var: "-5.0%" },
+            { region: "嘉義", mapNames: ["嘉義市", "嘉義縣"], overall: 93.83, overall_feb: 90.43, station: 98, station_feb: 99, appearance: 88, appearance_feb: 84, functionality: 96, functionality_feb: 98, ems: 94.9, ems_feb: 82.2, operability: 99.25, operability_feb: 98.98, mapCenter: [120.45, 23.48], labelPos: [119.5, 23.5], base: { s: 11, v: 80, e: 10, t: "2 輛 (2.5%)" }, tire_history: [0, 1, 0, 3, 1, 1, 2.5], tire_count: 2, maintenance_rate: 94.86, maintenance_rate_feb: 82.20, m_fleet: 2936, m_fleet_feb: 2786, m_accident: 7, m_accident_feb: 10, m_records: 2767, m_records_feb: 2265, m_var: "+12.66%", sim_total: 80, sim_a_count: 6, sim_a_ratio: 7.5, sim_a_lm: 2.0, sim_a_var: "+5.5%", sim_b_count: 22, sim_b_ratio: 27.5, sim_b_lm: 25.0, sim_b_var: "+2.5%", sim_c_count: 45, sim_c_ratio: 56.3, sim_c_lm: 61.0, sim_c_var: "-4.7%" },
+            { region: "台南", mapNames: ["臺南市", "台南市"], overall: 94.03, overall_feb: 94.23, station: 99, station_feb: 100, appearance: 90, appearance_feb: 84, functionality: 97, functionality_feb: 99, ems: 93.5, ems_feb: 91.8, operability: 98.42, operability_feb: 100.00, mapCenter: [120.25, 23.14], labelPos: [119.5, 23.1], base: { s: 20, v: 142, e: 32, t: "7 輛 (4.9%)" }, tire_history: [4, 7, 2, 0, 1, 2, 4.9], tire_count: 7, maintenance_rate: 93.49, maintenance_rate_feb: 91.81, m_fleet: 7580, m_fleet_feb: 7580, m_accident: 24, m_accident_feb: 24, m_records: 7018, m_records_feb: 6927, m_var: "+1.68%", sim_total: 142, sim_a_count: 2, sim_a_ratio: 1.4, sim_a_lm: 3.9, sim_a_var: "-2.5%", sim_b_count: 31, sim_b_ratio: 21.8, sim_b_lm: 13.3, sim_b_var: "+8.5%", sim_c_count: 74, sim_c_ratio: 52.1, sim_c_lm: 65.6, sim_c_var: "-13.5%" },
+            { region: "高雄", mapNames: ["高雄市"], overall: 91.72, overall_feb: 88.14, station: 100, station_feb: 100, appearance: 83, appearance_feb: 80, functionality: 97, functionality_feb: 96, ems: 100.0, ems_feb: 99.8, operability: 98.31, operability_feb: 94.89, mapCenter: [120.31, 22.62], labelPos: [119.5, 22.7], base: { s: 39, v: 268, e: 39, t: "13 輛 (4.9%)" }, tire_history: [15, 15, 8, 3, 0, 7, 4.9], tire_count: 13, maintenance_rate: 100.00, maintenance_rate_feb: 99.77, m_fleet: 13106, m_fleet_feb: 13106, m_accident: 53, m_accident_feb: 51, m_records: 12989, m_records_feb: 13002, m_var: "+0.23%", sim_total: 288, sim_a_count: 11, sim_a_ratio: 3.8, sim_a_lm: 6.2, sim_a_var: "-2.4%", sim_b_count: 69, sim_b_ratio: 24.0, sim_b_lm: 28.9, sim_b_var: "-4.9%", sim_c_count: 194, sim_c_ratio: 67.4, sim_c_lm: 70.8, sim_c_var: "-3.4%" },
+            { region: "屏東", mapNames: ["屏東縣"], overall: 95.20, overall_feb: 94.05, station: 100, station_feb: 100, appearance: 89, appearance_feb: 88, functionality: 98, functionality_feb: 96, ems: 100.0, ems_feb: 100.0, operability: 100.00, operability_feb: 100.00, mapCenter: [120.60, 22.50], labelPos: [119.5, 22.3], base: { s: 8, v: 40, e: 14, t: "1 輛 (2.5%)" }, tire_history: [5, 13, 5, 3, 6, 5, 2.5], tire_count: 1, maintenance_rate: 100.00, maintenance_rate_feb: 100.00, m_fleet: 1905, m_fleet_feb: 1905, m_accident: 14, m_accident_feb: 18, m_records: 1886, m_records_feb: 1880, m_var: "0.00%", sim_total: 40, sim_a_count: 2, sim_a_ratio: 5.0, sim_a_lm: 10.3, sim_a_var: "-5.3%", sim_b_count: 6, sim_b_ratio: 15.0, sim_b_lm: 17.9, sim_b_var: "-2.9%", sim_c_count: 25, sim_c_ratio: 62.5, sim_c_lm: 64.1, sim_c_var: "-1.6%" },
+            { region: "台東", mapNames: ["臺東縣", "台東縣"], overall: 96.58, overall_feb: 97.50, station: 100, station_feb: 100, appearance: 93, appearance_feb: 94, functionality: 98, functionality_feb: 99, ems: 100.0, ems_feb: 100.0, operability: 100.00, operability_feb: 100.00, mapCenter: [121.14, 22.75], labelPos: [122.5, 22.7], base: { s: 5, v: 24, e: 1, t: "1 輛 (4.2%)" }, tire_history: [0, 0, 0, 0, 0, 0, 4.2], tire_count: 1, maintenance_rate: 100.00, maintenance_rate_feb: 100.00, m_fleet: 1120, m_fleet_feb: 1120, m_accident: 7, m_accident_feb: 6, m_records: 1138, m_records_feb: 1117, m_var: "0.00%", sim_total: 24, sim_a_count: 0, sim_a_ratio: 0.0, sim_a_lm: 0.0, sim_a_var: "0.0%", sim_b_count: 3, sim_b_ratio: 12.5, sim_b_lm: 8.3, sim_b_var: "+4.2%", sim_c_count: 12, sim_c_ratio: 50.0, sim_c_lm: 50.0, sim_c_var: "0.0%" }
+        ];
+
+        // ==========================================
+        // 【1. 強制降級推移 (Data Shifting) 】
+        // 在開始解析 CSV 前，立刻深拷貝並將歷史資料退到 _feb 變數
+        // ==========================================
+        let finalOutputData = JSON.parse(JSON.stringify(baseRawData));
+        
+        finalOutputData.forEach(row => {
+            // 精準手動降級，確保所有_feb 穩穩儲存上月資料
+            row.overall_feb = row.overall;
+            row.station_feb = row.station;
+            row.appearance_feb = row.appearance;
+            row.functionality_feb = row.functionality;
+            row.ems_feb = row.ems;
+            row.operability_feb = row.operability;
+            row.maintenance_rate_feb = row.maintenance_rate;
+            row.m_fleet_feb = row.m_fleet;
+            row.m_accident_feb = row.m_accident;
+            row.m_records_feb = row.m_records;
+        });
+        
+        // 追蹤欄位更新以供 UI 高亮
+        let updatedFields = {}; 
+        finalOutputData.forEach(r => updatedFields[r.region] = {});
+
+        // --- ETL 設定與對應邏輯 ---
+        const regionAliases = {
+            "雙北": ["雙北", "臺北市", "台北市", "新北市", "台北", "新北"],
+            "桃園": ["桃園", "桃園市", "桃園縣"],
+            "新竹": ["新竹", "新竹市", "新竹縣"],
+            "苗栗": ["苗栗", "苗栗縣", "苗栗市"],
+            "台中": ["台中", "臺中", "台中市", "臺中市"],
+            "嘉義": ["嘉義", "嘉義市", "嘉義縣"],
+            "台南": ["台南", "臺南", "台南市", "臺南市"],
+            "高雄": ["高雄", "高雄市", "高雄縣"],
+            "屏東": ["屏東", "屏東縣", "屏東市"],
+            "台東": ["台東", "臺東", "台東縣", "臺東縣"]
+        };
+
+        const fieldMapping = {
+            'eval': [
+                { key: 'station', keywords: ['場站妥善度', '妥善'], isNum: true },
+                { key: 'appearance', keywords: ['外觀', '自行車外觀與重要標示'], isNum: true },
+                { key: 'functionality', keywords: ['車輛功能與配件', '功能', '機能'], isNum: true }
+            ],
+            'operability': [
+                { key: 'operability', keywords: ['在站車輛可動率', '可動率'], isNum: true }
+            ],
+            'maintenance': [
+                { key: 'm_fleet', keywords: ['總營運車輛數', '營運'], isNum: true },
+                { key: 'm_accident', keywords: ['事故車輛數', '事故'], isNum: true },
+                { key: 'm_records', keywords: ['一級維護記錄數', '一級維護紀錄數', '記錄', '紀錄'], isNum: true },
+                { key: 'maintenance_rate', keywords: ['一級維護率', '維護率'], isNum: true },
+                { key: 'm_var', keywords: ['較上個月變動', '變動'], isNum: false }
+            ]
+        };
+
+        // --- 共用解析工具 ---
+        function parseNumberValue(valStr) {
+            if (!valStr) return 0;
+            // 清洗掉百分比 %、逗號 ,、單位與隱形空白
+            let cleanStr = String(valStr).replace(/[%輛台, ]/g, '').trim();
+            let num = parseFloat(cleanStr);
+            return isNaN(num) ? 0 : num;
+        }
+
+        // --- 處理 CSV 資料合併 ---
+        let uploadedFilesCount = 0;
+        let globalTargetMonth = ""; // 儲存動態抓取到的最新月份 (例如 2026/05)
+
+        function handleCSV(file, type) {
+            Papa.parse(file, {
+                header: false,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    let data = results.data;
+                    if (data.length === 0) return;
+
+                    let isTargetMonthBlock = false;
+                    let targetMonth = "";
+                    let isHeaderParsed = false; // 1. 新增標題判斷旗標
+                    let cityColMap = {}; 
+                    let parsedCount = 0;
+                    let isNextRowTirePercent = false; // 跨行讀取胎壓百分比旗標
+                    let mappingRules = fieldMapping[type] || [];
+
+                    for (let i = 0; i < data.length; i++) {
+                        let row = data[i].map(cell => String(cell).trim());
+                        let val0 = row[0];
+
+                        // 【2. 自動辨識並動態分割「標題月份」與單區塊狀態機】
+                        if (/^\d{4}[\/\-]\d{1,2}$/.test(val0)) {
+                            if (targetMonth === "") {
+                                targetMonth = val0;
+                                globalTargetMonth = targetMonth;
+                                isTargetMonthBlock = true;
+                                isHeaderParsed = true;
+                                isNextRowTirePercent = false; 
+
+                                for (let colIdx = 1; colIdx < row.length; colIdx++) {
+                                    let colName = row[colIdx];
+                                    if (!colName) continue;
+                                    
+                                    let matchedRegion = null;
+                                    for (let r in regionAliases) {
+                                        if (regionAliases[r].includes(colName) || regionAliases[r].some(alias => colName.includes(alias))) {
+                                            matchedRegion = r;
+                                            break;
+                                        }
+                                    }
+                                    if (matchedRegion) {
+                                        cityColMap[colIdx] = matchedRegion;
+                                    }
+                                }
+                                continue;
+                            } else if (val0 === targetMonth && isHeaderParsed) {
+                                // 攔截「第二個」相同月份字串作為綜合分數
+                                if (type === 'eval') {
+                                    for (let colIdx in cityColMap) {
+                                        let region = cityColMap[colIdx];
+                                        let targetData = finalOutputData.find(d => d.region === region);
+                                        if (!targetData) continue;
+
+                                        let rawVal = row[colIdx];
+                                        if (rawVal !== undefined && rawVal !== "") {
+                                            targetData['overall'] = parseNumberValue(rawVal);
+                                            updatedFields[region]['overall'] = true;
+                                            parsedCount++;
+                                        }
+                                    }
+                                }
+                                continue;
+                            } else if (val0 !== targetMonth) {
+                                // 遇到舊的月份區塊立刻 break 中斷
+                                isTargetMonthBlock = false;
+                                break;
+                            }
+                        }
+
+                        // 進入鎖定的最新月區塊內
+                        if (isTargetMonthBlock) {
+                            
+                            // 【3. 前後胎壓歷史趨勢滾動 (Array Shifting) - 百分比跨行讀取】
+                            if (isNextRowTirePercent) {
+                                for (let colIdx in cityColMap) {
+                                    let region = cityColMap[colIdx];
+                                    let targetData = finalOutputData.find(d => d.region === region);
+                                    if (!targetData) continue;
+
+                                    let rawVal = row[colIdx];
+                                    if (rawVal !== undefined && rawVal !== "") {
+                                        let newPercent = parseNumberValue(rawVal);
+                                        // 嚴格滾動：.shift() 踢掉最左舊資料，.push() 塞入最新資料維持長度
+                                        targetData.tire_history.shift();
+                                        targetData.tire_history.push(newPercent);
+                                        // 組合顯示字串
+                                        targetData.base.t = targetData.tire_count + " 輛 (" + newPercent + "%)";
+                                        updatedFields[region]['tire_count'] = true;
+                                        parsedCount++;
+                                    }
+                                }
+                                isNextRowTirePercent = false; 
+                                continue; 
+                            }
+
+                            if (!val0) continue;
+
+                            // 偵測是否為胎壓車輛數，準備開啟跨行旗標
+                            if (val0.includes('前後胎壓未達標準') || val0.includes('胎壓未達')) {
+                                for (let colIdx in cityColMap) {
+                                    let region = cityColMap[colIdx];
+                                    let targetData = finalOutputData.find(d => d.region === region);
+                                    if (!targetData) continue;
+
+                                    let rawVal = row[colIdx];
+                                    if (rawVal !== undefined && rawVal !== "") {
+                                        targetData.tire_count = parseNumberValue(rawVal);
+                                        updatedFields[region]['tire_count'] = true;
+                                        parsedCount++;
+                                    }
+                                }
+                                // 開啟跨行旗標，準備擷取下一列的百分比
+                                isNextRowTirePercent = true;
+                                continue;
+                            }
+
+                            // 一般指標對齊擷取
+                            let matchedRule = null;
+                            for (let rule of mappingRules) {
+                                if (rule.keywords.some(kw => val0.includes(kw))) {
+                                    matchedRule = rule;
+                                    break;
+                                }
+                            }
+
+                            if (matchedRule) {
+                                for (let colIdx in cityColMap) {
+                                    let region = cityColMap[colIdx];
+                                    let targetData = finalOutputData.find(d => d.region === region);
+                                    if (!targetData) continue;
+
+                                    let rawVal = row[colIdx];
+                                    if (rawVal !== undefined && rawVal !== "") {
+                                        let finalVal = matchedRule.isNum ? parseNumberValue(rawVal) : String(rawVal).trim();
+                                        
+                                        // 嚴格分流：只准覆寫當月主數字 (如 overall)，絕對不碰 _feb 欄位
+                                        targetData[matchedRule.key] = finalVal;
+                                        updatedFields[region][matchedRule.key] = true;
+
+                                        if (matchedRule.key === 'maintenance_rate') {
+                                            targetData.ems = finalVal;
+                                            updatedFields[region]['ems'] = true;
+                                        }
+
+                                        parsedCount++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 更新 UI
+                    let statusText = `✅ 提取完成`;
+                    if (targetMonth) statusText += ` (鎖定最新月份: ${targetMonth})`;
+                    document.getElementById(`status-${type}`).innerText = statusText + `，更新了 ${parsedCount} 格數據`;
+                    document.getElementById(`status-${type}`).className = "file-status status-loaded";
+                    
+                    uploadedFilesCount++;
+                    updatePreviewTable();
+                    
+                    if (globalTargetMonth) {
+                        document.getElementById('target-month-badge').innerText = `目前處理最新月份：${globalTargetMonth}`;
+                    }
+
+                    if (uploadedFilesCount > 0) {
+                        document.getElementById('btn-export').removeAttribute('disabled');
+                    }
+                },
+                error: function(err) {
+                    alert(`解析 ${type} 失敗！\n錯誤訊息：` + err.message);
+                }
+            });
+        }
+
+        // --- 預覽表格更新 ---
+        function updatePreviewTable() {
+            document.getElementById('preview-card').classList.remove('d-none');
+            const tbody = document.querySelector('#preview-table tbody');
+            tbody.innerHTML = '';
+
+            finalOutputData.forEach(row => {
+                const tr = document.createElement('tr');
+                const fields = ['overall', 'station', 'appearance', 'functionality', 'operability', 'ems', 'tire_count', 'm_accident', 'm_fleet'];
+                
+                let html = `<td><strong>${row.region}</strong></td>`;
+                fields.forEach(f => {
+                    let isUpdated = updatedFields[row.region][f];
+                    let val = row[f];
+                    if (typeof val === 'number') {
+                        if (['overall', 'operability', 'maintenance_rate', 'ems'].includes(f)) val = val.toFixed(2);
+                        else val = val.toLocaleString();
+                    }
+                    html += `<td class="${isUpdated ? 'val-changed' : ''}">${val !== undefined ? val : ''}</td>`;
+                });
+                
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+        }
+
+        setupUploadZone('drop-eval', 'file-eval', 'eval');
+        setupUploadZone('drop-operability', 'file-operability', 'operability');
+        setupUploadZone('drop-maintenance', 'file-maintenance', 'maintenance');
+        updatePreviewTable();
+
+        function setupUploadZone(zoneId, inputId, typeStr) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(inputId);
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', e => { e.preventDefault(); zone.classList.remove('dragover'); });
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    handleCSV(e.dataTransfer.files[0], typeStr);
+                }
+            });
+            input.addEventListener('change', e => {
+                if (e.target.files.length) {
+                    handleCSV(e.target.files[0], typeStr);
+                }
+            });
+        }
+
+        // --- 下載匯出邏輯 ---
+        document.getElementById('btn-export').addEventListener('click', function() {
+            
+            // 【4. & 5. 隱形寄生腳本實裝：網頁月份字樣全自動修正與雙月對比 DOM 注入】
+            let domInjectionScript = "";
+            if (globalTargetMonth) {
+                // 自動拆解 2026/05 為年份與月份
+                let mMatch = globalTargetMonth.match(/(\d{4})[\/\-](\d{1,2})/);
+                if (mMatch) {
+                    let newYear = mMatch[1]; // e.g. "2026"
+                    let newMonthStr = mMatch[2];
+                    let newMonthInt = parseInt(newMonthStr, 10); // e.g. 5
+                    let prevMonthInt = newMonthInt === 1 ? 12 : newMonthInt - 1; // 處理跨年上月邏輯
+                    
+                    domInjectionScript = `
+// =====================================================================
+// ETL 自動注入全域變數腳本：負責傳遞最新年份與月份給 app.js
+// =====================================================================
+window.GLOBAL_YEAR = ${newYear};
+window.GLOBAL_MONTH = ${newMonthInt};
+
+// 相容性：將月份寫入 rawData 以防萬一
+if (typeof rawData !== 'undefined' && rawData.length > 0) {
+    rawData[0].month = "${newYear}/${newMonthStr.padStart(2, '0')}";
+}
+`;
+                }
+            }
+
+            // 【守住 UI 禁忌，產出乾淨格式】: 移除 JSON 雙引號，完全匹配手寫風格
+            let outputString = `// js/data.js\n\n// 核心資料庫 (透過 CSV ETL 自動生成)\nconst rawData = ${JSON.stringify(finalOutputData, null, 4).replace(/"([^"]+)":/g, '$1:')};\n\n// 子選單邏輯\nconst statsMetrics = [\n    { key: 'station', label: '場站妥善度' },\n    { key: 'appearance', label: '自行車外觀與標示' },\n    { key: 'functionality', label: '自行車重要機能' },\n    { key: 'ems', label: '一級維護率(EMS)' },\n    { key: 'operability', label: '可動率' }\n];\n\nconst maintenanceMetrics = [\n    { key: 'm_accident', label: '事故車輛數' },\n    { key: 'm_records', label: '一級維護記錄數' },\n    { key: 'maintenance_rate', label: '一級維護率' },\n    { key: 'm_info', label: '一級維護補充說明' }\n];\n\n// 模擬體驗數據\nconst simulationMetrics = [\n    { key: 'sim_a', label: 'A級' },\n    { key: 'sim_b', label: 'B級' },\n    { key: 'sim_c', label: 'C級' }\n];\n${domInjectionScript}`;
+
+            const blob = new Blob([outputString], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.js';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 0);
+        });
+    </script>
+</body>
+</html>
